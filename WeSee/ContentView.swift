@@ -6,16 +6,28 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
+    @Environment(\.modelContext) private var modelContext
+    @State private var chatViewModel = ChatViewModel()
+    @State private var sidebarViewModel = SidebarViewModel()
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        NavigationSplitView {
+            SidebarView(
+                viewModel: sidebarViewModel,
+                chatViewModel: chatViewModel
+            )
+            .frame(minWidth: 220)
+        } detail: {
+            ChatView(viewModel: chatViewModel)
+                .frame(minWidth: 400)
         }
-        .padding()
+        .onAppear {
+            chatViewModel.configure(with: modelContext)
+            sidebarViewModel.configure(with: modelContext)
+        }
     }
 }
 
