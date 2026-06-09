@@ -29,12 +29,6 @@ struct ChatViewModelTests {
         #expect(viewModel.isSendingDisabled == true)
     }
 
-    @Test func filterByTagUpdatesSelectedTag() {
-        let viewModel = ChatViewModel()
-        viewModel.filterByTag(nil)
-        #expect(viewModel.selectedTag == nil)
-    }
-
     @Test func clearErrorSetsErrorMessageToNil() {
         let viewModel = ChatViewModel()
         viewModel.errorMessage = "test error"
@@ -63,7 +57,15 @@ struct ChatViewModelTests {
         viewModel.addMessage(content: "msg2", isFromMe: false)
         viewModel.newConversation()
         #expect(viewModel.messages.isEmpty)
-        #expect(viewModel.selectedTag == nil)
         #expect(viewModel.isStreaming == false)
+    }
+
+    @Test func newConversationClearsToolCallResults() {
+        let viewModel = ChatViewModel()
+        viewModel.toolCallResults = [
+            (id: "1", name: "echo", arguments: [:], result: nil),
+        ]
+        viewModel.newConversation()
+        #expect(viewModel.toolCallResults.isEmpty)
     }
 }

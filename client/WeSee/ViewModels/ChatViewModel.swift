@@ -5,45 +5,38 @@ import SwiftData
 @Observable
 final class ChatViewModel {
     var messages: [Message] = []
-    var selectedTag: Tag?
     var isSendingDisabled: Bool = false
     var errorMessage: String?
     var streamingContent: String = ""
     var isStreaming: Bool = false
+    var toolCallResults: [(id: String, name: String, arguments: [String: Any], result: String?)] = []
 
     private var modelContext: ModelContext?
-    private let deepSeekService: DeepSeekService
+    private let agentRunner: AgentRunner
 
-    init(deepSeekService: DeepSeekService = DeepSeekService()) {
-        self.deepSeekService = deepSeekService
+    init(agentRunner: AgentRunner = AgentRunner()) {
+        self.agentRunner = agentRunner
     }
 
     func configure(with context: ModelContext) {
         self.modelContext = context
     }
 
-    // MARK: - Messages
-
     func fetchMessages() {
         guard let context = modelContext else { return }
-        var descriptor = FetchDescriptor<Message>(sortBy: [SortDescriptor(\.timestamp)])
+        let descriptor = FetchDescriptor<Message>(sortBy: [SortDescriptor(\.timestamp)])
         do {
-            let fetched = try context.fetch(descriptor)
-            if let tag = selectedTag {
-                messages = fetched.filter { $0.tags.contains(where: { $0.id == tag.id }) }
-            } else {
-                messages = fetched
-            }
+            messages = try context.fetch(descriptor)
         } catch {
             errorMessage = "加载消息失败"
         }
     }
 
-    func addMessage(content: String, isFromMe: Bool, tags: [Tag] = []) {
+    func addMessage(content: String, isFromMe: Bool) {
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= 5000 else { return }
 
-        let msg = Message(content: trimmed, isFromMe: isFromMe, tags: tags)
+        let msg = Message(content: trimmed, isFromMe: isFromMe)
         messages.append(msg)
 
         guard let context = modelContext else { return }
@@ -53,22 +46,20 @@ final class ChatViewModel {
 
     func newConversation() {
         messages = []
-        selectedTag = nil
         streamingContent = ""
         isStreaming = false
+        toolCallResults = []
     }
-
-    // MARK: - Send with streaming
 
     func sendMessage(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= 5000 else { return }
 
-        let tags: [Tag] = selectedTag.map { [$0] } ?? []
-        addMessage(content: trimmed, isFromMe: true, tags: tags)
+        addMessage(content: trimmed, isFromMe: true)
         isSendingDisabled = true
         isStreaming = true
         streamingContent = ""
+        toolCallResults = []
 
         Task {
             let config: ClientConfig
@@ -84,7 +75,7 @@ final class ChatViewModel {
             }
 
             do {
-                for try await event in deepSeekService.streamChat(
+                for try await event in agentRunner.run(
                     history: messages,
                     config: config
                 ) {
@@ -92,14 +83,29 @@ final class ChatViewModel {
                         switch event {
                         case .token(let token):
                             self.streamingContent += token
+                        case .thinking(let text):
+                            self.streamingContent += text
+                        case .toolCallStart(let id, let name, let arguments):
+                            self.toolCallResults.append(
+                                (id: id, name: name, arguments: arguments, result: nil)
+                            )
+                        case .toolCallResult(let id, let name, let result):
+                            if let index = self.toolCallResults.firstIndex(where: { $0.id == id }) {
+                                self.toolCallResults[index].result = result
+                            }
                         case .done:
-                            self.addMessage(content: self.streamingContent, isFromMe: false)
+                            let finalContent = self.streamingContent
+                            if !finalContent.isEmpty {
+                                self.addMessage(content: finalContent, isFromMe: false)
+                            }
                             self.streamingContent = ""
+                            self.toolCallResults = []
                             self.isStreaming = false
                             self.isSendingDisabled = false
                         case .error(let msg):
                             self.errorMessage = msg
                             self.isStreaming = false
+                            self.toolCallResults = []
                             self.isSendingDisabled = false
                         }
                     }
@@ -108,21 +114,11 @@ final class ChatViewModel {
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
                     self.isStreaming = false
+                    self.toolCallResults = []
                     self.isSendingDisabled = false
                 }
             }
         }
-    }
-
-    func toggleBookmark(_ message: Message) {
-        guard let context = modelContext else { return }
-        message.isBookmarked.toggle()
-        try? context.save()
-        fetchMessages()
-    }
-
-    func filterByTag(_ tag: Tag?) {
-        selectedTag = tag
     }
 
     func clearError() {
