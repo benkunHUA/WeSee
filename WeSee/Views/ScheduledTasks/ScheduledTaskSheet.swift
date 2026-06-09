@@ -38,7 +38,10 @@ struct ScheduledTaskSheet: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Toggle("", isOn: .constant(task.isEnabled))
+                            Toggle("", isOn: Binding(
+                                get: { task.isEnabled },
+                                set: { _ in viewModel.toggleTask(task) }
+                            ))
                                 .toggleStyle(.switch)
                                 .labelsHidden()
                         }

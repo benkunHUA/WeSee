@@ -34,4 +34,11 @@ final class SidebarViewModel {
         try? context.save()
         fetchTags()
     }
+
+    func toggleTask(_ task: ScheduledTask) {
+        guard let context = modelContext else { return }
+        task.isEnabled.toggle()
+        try? context.save()
+        fetchScheduledTasks()
+    }
 }
