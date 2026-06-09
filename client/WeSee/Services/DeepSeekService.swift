@@ -59,7 +59,9 @@ class DeepSeekService {
         tools: [[String: Any]] = [],
         systemPrompt: String? = nil
     ) -> URLRequest {
-        let url = URL(string: config.baseURL + "/v1/chat/completions")!
+        guard let url = URL(string: config.baseURL + "/v1/chat/completions") else {
+            fatalError("Invalid baseURL in config: \(config.baseURL)")
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

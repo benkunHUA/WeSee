@@ -2,7 +2,7 @@ import Foundation
 
 final class FileSystemTool: AgentTool {
     let name = "file_system"
-    let description = "Read, write, and list files on the local filesystem. Use read_file to read content, write_file to create or overwrite files, and list_directory to list directory contents."
+    let description = "Read, write, and list files within the workspace directory. Use read_file to read content, write_file to create or overwrite files, and list_directory to list directory contents. All paths are relative to the workspace root."
 
     let parameters = JSONSchema(
         type: "object",
@@ -13,7 +13,7 @@ final class FileSystemTool: AgentTool {
             ),
             "path": JSONSchema.PropertyDef(
                 type: "string",
-                description: "Absolute path to the file or directory"
+                description: "Path relative to the workspace directory"
             ),
             "content": JSONSchema.PropertyDef(
                 type: "string",
@@ -25,10 +25,21 @@ final class FileSystemTool: AgentTool {
 
     private let fileManager: FileManager
     private let maxFileSize: Int
+    private let rootDirectory: String
 
-    init(fileManager: FileManager = .default, maxFileSize: Int = 1_000_000) {
+    init(
+        fileManager: FileManager = .default,
+        maxFileSize: Int = 1_000_000,
+        rootDirectory: String? = nil
+    ) {
         self.fileManager = fileManager
         self.maxFileSize = maxFileSize
+        if let root = rootDirectory {
+            self.rootDirectory = root
+        } else {
+            let home = fileManager.homeDirectoryForCurrentUser.path
+            self.rootDirectory = (home as NSString).appendingPathComponent("Documents/WeSee")
+        }
     }
 
     func execute(arguments: [String: Any]) async throws -> String {
@@ -36,14 +47,26 @@ final class FileSystemTool: AgentTool {
               let path = arguments["path"] as? String else {
             return "Error: missing required parameters 'action' or 'path'"
         }
+        guard let safePath = resolveSafePath(path) else {
+            return "Error: path '\(path)' escapes the workspace directory"
+        }
         switch action {
-        case "read_file": return try await readFile(at: path)
+        case "read_file": return try await readFile(at: safePath)
         case "write_file":
             let content = arguments["content"] as? String ?? ""
-            return try await writeFile(content: content, at: path)
-        case "list_directory": return try await listDirectory(at: path)
+            return try await writeFile(content: content, at: safePath)
+        case "list_directory": return try await listDirectory(at: safePath)
         default: return "Error: unknown action '\(action)'. Supported: read_file, write_file, list_directory"
         }
+    }
+
+    private func resolveSafePath(_ relativePath: String) -> String? {
+        let resolved = ((rootDirectory as NSString)
+            .appendingPathComponent(relativePath) as NSString)
+            .standardizingPath
+        let rootStandardized = (rootDirectory as NSString).standardizingPath
+        guard resolved.hasPrefix(rootStandardized) else { return nil }
+        return resolved
     }
 
     private func readFile(at path: String) async throws -> String {

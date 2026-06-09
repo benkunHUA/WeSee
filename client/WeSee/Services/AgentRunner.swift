@@ -38,7 +38,7 @@ final class AgentRunner {
                             messages: messages,
                             config: config,
                             tools: tools,
-                            systemPrompt: round == 1 ? systemPrompt : nil
+                            systemPrompt: systemPrompt
                         )
 
                         for try await event in stream {
@@ -79,8 +79,9 @@ final class AgentRunner {
                     var toolCallDicts: [[String: Any]] = []
 
                     for key in sortedKeys {
-                        let tc = toolCallAggregator[key]!
-                        guard !tc.id.isEmpty, !tc.name.isEmpty else { continue }
+                        guard let tc = toolCallAggregator[key],
+                              !tc.id.isEmpty,
+                              !tc.name.isEmpty else { continue }
 
                         let argsDict = Self.parseJSONArgs(tc.arguments) ?? [:]
 

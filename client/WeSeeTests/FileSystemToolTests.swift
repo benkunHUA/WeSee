@@ -4,51 +4,62 @@ import Foundation
 
 struct FileSystemToolTests {
     @Test func readFileReturnsContent() async throws {
-        let tmpDir = FileManager.default.temporaryDirectory
-        let filePath = tmpDir.appendingPathComponent("test_read.txt").path
-        try "hello world".write(toFile: filePath, atomically: true, encoding: .utf8)
-        let tool = FileSystemTool()
-        let result = try await tool.execute(arguments: ["action": "read_file", "path": filePath])
+        let tmpDir = FileManager.default.temporaryDirectory.path
+        let tool = FileSystemTool(rootDirectory: tmpDir)
+        try "hello world".write(toFile: tmpDir + "/test_read.txt", atomically: true, encoding: .utf8)
+        let result = try await tool.execute(arguments: ["action": "read_file", "path": "test_read.txt"])
         #expect(result == "hello world")
     }
 
     @Test func readFileNotFoundReturnsError() async throws {
-        let tool = FileSystemTool()
-        let result = try await tool.execute(arguments: ["action": "read_file", "path": "/nonexistent/file.txt"])
+        let tmpDir = FileManager.default.temporaryDirectory.path
+        let tool = FileSystemTool(rootDirectory: tmpDir)
+        let result = try await tool.execute(arguments: ["action": "read_file", "path": "nonexistent.txt"])
         #expect(result.hasPrefix("Error: file not found"))
     }
 
     @Test func writeFileCreatesFile() async throws {
-        let tmpDir = FileManager.default.temporaryDirectory
-        let filePath = tmpDir.appendingPathComponent("test_write.txt").path
-        let tool = FileSystemTool()
+        let tmpDir = FileManager.default.temporaryDirectory.path
+        let tool = FileSystemTool(rootDirectory: tmpDir)
         let result = try await tool.execute(arguments: [
-            "action": "write_file", "path": filePath, "content": "test content",
+            "action": "write_file", "path": "test_write.txt", "content": "test content",
         ])
         #expect(result.hasPrefix("Successfully wrote"))
-        let written = try String(contentsOfFile: filePath, encoding: .utf8)
+        let written = try String(contentsOfFile: tmpDir + "/test_write.txt", encoding: .utf8)
         #expect(written == "test content")
     }
 
     @Test func listDirectoryReturnsContents() async throws {
-        let tool = FileSystemTool()
+        let tmpDir = FileManager.default.temporaryDirectory.path
+        let tool = FileSystemTool(rootDirectory: tmpDir)
         let result = try await tool.execute(arguments: [
-            "action": "list_directory", "path": FileManager.default.temporaryDirectory.path,
+            "action": "list_directory", "path": ".",
         ])
         #expect(!result.isEmpty)
     }
 
     @Test func listDirectoryNotFoundReturnsError() async throws {
-        let tool = FileSystemTool()
+        let tmpDir = FileManager.default.temporaryDirectory.path
+        let tool = FileSystemTool(rootDirectory: tmpDir)
         let result = try await tool.execute(arguments: [
-            "action": "list_directory", "path": "/nonexistent/dir",
+            "action": "list_directory", "path": "nonexistent",
         ])
         #expect(result.hasPrefix("Error:"))
     }
 
     @Test func unknownActionReturnsError() async throws {
-        let tool = FileSystemTool()
-        let result = try await tool.execute(arguments: ["action": "delete_file", "path": "/tmp/test.txt"])
+        let tmpDir = FileManager.default.temporaryDirectory.path
+        let tool = FileSystemTool(rootDirectory: tmpDir)
+        let result = try await tool.execute(arguments: ["action": "delete_file", "path": "test.txt"])
         #expect(result.hasPrefix("Error: unknown action"))
+    }
+
+    @Test func pathTraversalIsRejected() async throws {
+        let tmpDir = FileManager.default.temporaryDirectory.path
+        let tool = FileSystemTool(rootDirectory: tmpDir)
+        let result = try await tool.execute(arguments: [
+            "action": "read_file", "path": "../etc/passwd",
+        ])
+        #expect(result.hasPrefix("Error: path"))
     }
 }
