@@ -1,6 +1,10 @@
 import os
 from functools import lru_cache
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 class Settings:
     deepseek_api_key: str = os.environ.get("DEEPSEEK_API_KEY", "")

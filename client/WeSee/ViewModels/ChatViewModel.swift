@@ -36,7 +36,7 @@ final class ChatViewModel {
                 fetchMessages()
             }
         } catch {
-            errorMessage = "加载对话列表失败"
+            // Server unreachable is non-critical; user can still use local features
         }
     }
 
