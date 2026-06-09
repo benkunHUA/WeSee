@@ -5,43 +5,21 @@ import SwiftData
 @Observable
 final class ChatViewModel {
     var messages: [Message] = []
-    var conversations: [ConversationDTO] = []
     var selectedTag: Tag?
     var isSendingDisabled: Bool = false
     var errorMessage: String?
     var streamingContent: String = ""
     var isStreaming: Bool = false
-    var conversationId: String?
 
     private var modelContext: ModelContext?
-    private let remoteClient: RemoteClient
+    private let deepSeekService: DeepSeekService
 
-    init(remoteClient: RemoteClient = NoOpRemoteClient()) {
-        self.remoteClient = remoteClient
+    init(deepSeekService: DeepSeekService = DeepSeekService()) {
+        self.deepSeekService = deepSeekService
     }
 
     func configure(with context: ModelContext) {
         self.modelContext = context
-        fetchMessages()
-        Task { await loadConversations() }
-    }
-
-    // MARK: - Conversations
-
-    func loadConversations() async {
-        do {
-            conversations = try await remoteClient.fetchConversations()
-            if conversationId == nil, let first = conversations.first {
-                conversationId = first.id
-                fetchMessages()
-            }
-        } catch {
-            // Server unreachable is non-critical; user can still use local features
-        }
-    }
-
-    func selectConversation(_ id: String) {
-        conversationId = id
         fetchMessages()
     }
 
@@ -50,7 +28,6 @@ final class ChatViewModel {
     func fetchMessages() {
         guard let context = modelContext else { return }
         var descriptor = FetchDescriptor<Message>(sortBy: [SortDescriptor(\.timestamp)])
-        // Tag filtering is done in-memory after fetch to avoid Predicate macro complexity
         do {
             let fetched = try context.fetch(descriptor)
             if let tag = selectedTag {
@@ -85,17 +62,28 @@ final class ChatViewModel {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= 5000 else { return }
 
-        // Add user message locally
         addMessage(content: trimmed, isFromMe: true)
         isSendingDisabled = true
         isStreaming = true
         streamingContent = ""
 
         Task {
+            let config: ClientConfig
             do {
-                for try await event in remoteClient.sendMessage(
-                    trimmed,
-                    conversationId: conversationId
+                config = try ConfigLoader.load()
+            } catch {
+                await MainActor.run {
+                    self.errorMessage = error.localizedDescription
+                    self.isStreaming = false
+                    self.isSendingDisabled = false
+                }
+                return
+            }
+
+            do {
+                for try await event in deepSeekService.streamChat(
+                    history: messages,
+                    config: config
                 ) {
                     await MainActor.run {
                         switch event {
@@ -106,7 +94,6 @@ final class ChatViewModel {
                             self.streamingContent = ""
                             self.isStreaming = false
                             self.isSendingDisabled = false
-                            Task { await self.loadConversations() }
                         case .error(let msg):
                             self.errorMessage = msg
                             self.isStreaming = false

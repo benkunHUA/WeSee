@@ -1,10 +1,3 @@
-//
-//  ChatViewModelTests.swift
-//  WeSeeTests
-//
-//  Created by haobenkun on 2026/6/9.
-//
-
 import Testing
 @testable import WeSee
 
@@ -47,5 +40,20 @@ struct ChatViewModelTests {
         viewModel.errorMessage = "test error"
         viewModel.clearError()
         #expect(viewModel.errorMessage == nil)
+    }
+
+    @Test func sendMessageSetsStreamingContent() {
+        let viewModel = ChatViewModel()
+        viewModel.sendMessage("Hello")
+        #expect(viewModel.isStreaming == true)
+        #expect(viewModel.streamingContent == "")
+    }
+
+    @Test func sendMessageAppendsUserMessage() {
+        let viewModel = ChatViewModel()
+        viewModel.sendMessage("Hello")
+        #expect(viewModel.messages.count == 1)
+        #expect(viewModel.messages.first?.isFromMe == true)
+        #expect(viewModel.messages.first?.content == "Hello")
     }
 }
