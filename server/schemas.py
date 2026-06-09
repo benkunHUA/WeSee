@@ -56,7 +56,7 @@ class ConversationResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     content: str = Field(..., min_length=1, max_length=5000)
-    conversation_id: Optional[str] = None
+    conversation_id: Optional[str] = Field(None, validation_alias="conversationId")
 
 
 # --- Scheduled Task ---
