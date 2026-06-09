@@ -50,11 +50,14 @@ final class ChatViewModel {
     func fetchMessages() {
         guard let context = modelContext else { return }
         var descriptor = FetchDescriptor<Message>(sortBy: [SortDescriptor(\.timestamp)])
-        if let tag = selectedTag {
-            descriptor.predicate = #Predicate { $0.tags.contains(where: { $0.id == tag.id }) }
-        }
+        // Tag filtering is done in-memory after fetch to avoid Predicate macro complexity
         do {
-            messages = try context.fetch(descriptor)
+            let fetched = try context.fetch(descriptor)
+            if let tag = selectedTag {
+                messages = fetched.filter { $0.tags.contains(where: { $0.id == tag.id }) }
+            } else {
+                messages = fetched
+            }
         } catch {
             errorMessage = "加载消息失败"
         }
@@ -91,7 +94,7 @@ final class ChatViewModel {
         Task {
             do {
                 for try await event in remoteClient.sendMessage(
-                    content: trimmed,
+                    trimmed,
                     conversationId: conversationId
                 ) {
                     await MainActor.run {
