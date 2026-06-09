@@ -36,11 +36,14 @@ final class ChatViewModel {
     func addMessage(content: String, isFromMe: Bool, tags: [Tag] = []) {
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= 5000 else { return }
-        guard let context = modelContext else { return }
         let message = Message(content: trimmed, isFromMe: isFromMe, tags: tags)
-        context.insert(message)
-        try? context.save()
-        fetchMessages()
+        if let context = modelContext {
+            context.insert(message)
+            try? context.save()
+            fetchMessages()
+        } else {
+            messages.append(message)
+        }
         isSendingDisabled = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             self?.isSendingDisabled = false
