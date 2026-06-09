@@ -1,0 +1,20 @@
+{
+  "" : {
+    "const-values" : "/Users/haobenkun/Documents/workSpace/WeSee/build/WeSee.build/Release/WeSeeTests.build/Objects-normal/arm64/WeSeeTests-master.swiftconstvalues",
+    "dependencies" : "/Users/haobenkun/Documents/workSpace/WeSee/build/WeSee.build/Release/WeSeeTests.build/Objects-normal/arm64/WeSeeTests-master.d",
+    "diagnostics" : "/Users/haobenkun/Documents/workSpace/WeSee/build/WeSee.build/Release/WeSeeTests.build/Objects-normal/arm64/WeSeeTests-master.dia",
+    "emit-module-dependencies" : "/Users/haobenkun/Documents/workSpace/WeSee/build/WeSee.build/Release/WeSeeTests.build/Objects-normal/arm64/WeSeeTests-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/haobenkun/Documents/workSpace/WeSee/build/WeSee.build/Release/WeSeeTests.build/Objects-normal/arm64/WeSeeTests-master-emit-module.dia",
+    "swift-dependencies" : "/Users/haobenkun/Documents/workSpace/WeSee/build/WeSee.build/Release/WeSeeTests.build/Objects-normal/arm64/WeSeeTests-master.swiftdeps"
+  },
+  "/Users/haobenkun/Documents/workSpace/WeSee/WeSeeTests/ChatViewModelTests.swift" : {
+    "index-unit-output-path" : "/WeSee.build/Release/WeSeeTests.build/Objects-normal/arm64/ChatViewModelTests.o",
+    "llvm-bc" : "/Users/haobenkun/Documents/workSpace/WeSee/build/WeSee.build/Release/WeSeeTests.build/Objects-normal/arm64/ChatViewModelTests.bc",
+    "object" : "/Users/haobenkun/Documents/workSpace/WeSee/build/WeSee.build/Release/WeSeeTests.build/Objects-normal/arm64/ChatViewModelTests.o"
+  },
+  "/Users/haobenkun/Documents/workSpace/WeSee/WeSeeTests/WeSeeTests.swift" : {
+    "index-unit-output-path" : "/WeSee.build/Release/WeSeeTests.build/Objects-normal/arm64/WeSeeTests.o",
+    "llvm-bc" : "/Users/haobenkun/Documents/workSpace/WeSee/build/WeSee.build/Release/WeSeeTests.build/Objects-normal/arm64/WeSeeTests.bc",
+    "object" : "/Users/haobenkun/Documents/workSpace/WeSee/build/WeSee.build/Release/WeSeeTests.build/Objects-normal/arm64/WeSeeTests.o"
+  }
+}

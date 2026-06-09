@@ -1,0 +1,4 @@
+Target dependency graph (2 targets)
+Target 'WeSeeTests' in project 'WeSee'
+➜ Explicit dependency on target 'WeSee' in project 'WeSee'
+Target 'WeSee' in project 'WeSee' (no dependencies)

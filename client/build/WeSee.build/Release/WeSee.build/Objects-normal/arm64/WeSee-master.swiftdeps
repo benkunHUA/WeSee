@@ -1,0 +1,9 @@
+version: "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)"
+options: "97fa40ba481e59e202589a90802712dd82485920ee1185e6c65fc3272da6a7ac"
+build_start_time: [1780979201, 392175000]
+build_end_time: [1780979201, 874481000]
+inputs:
+  "/Users/haobenkun/Documents/workSpace/WeSee/WeSee/ContentView.swift": !dirty [1780974350, 726881171]
+  "/Users/haobenkun/Documents/workSpace/WeSee/WeSee/Models/Message.swift": !dirty [1780979026, 430064999]
+  "/Users/haobenkun/Documents/workSpace/WeSee/WeSee/WeSeeApp.swift": !dirty [1780974350, 681585433]
+  "/Users/haobenkun/Documents/workSpace/WeSee/build/WeSee.build/Release/WeSee.build/DerivedSources/GeneratedAssetSymbols.swift": !dirty [1780979168, 767622576]

@@ -7,9 +7,8 @@ struct ContentView: View {
     @State private var sidebarViewModel: SidebarViewModel
 
     init() {
-        let client = LiveRemoteClient()
-        _chatViewModel = State(initialValue: ChatViewModel(remoteClient: client))
-        _sidebarViewModel = State(initialValue: SidebarViewModel(remoteClient: client))
+        _chatViewModel = State(initialValue: ChatViewModel())
+        _sidebarViewModel = State(initialValue: SidebarViewModel())
     }
 
     var body: some View {
