@@ -26,12 +26,15 @@ struct SidebarView: View {
                     selectedTag: chatViewModel.selectedTag,
                     onSelectTag: { tag in
                         chatViewModel.filterByTag(tag)
+                    },
+                    onCreateTag: { name in
+                        viewModel.createTag(name: name)
                     }
                 )
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             } header: {
-                Text("历史会话")
+                Text("标签")
             }
         }
         .listStyle(.sidebar)

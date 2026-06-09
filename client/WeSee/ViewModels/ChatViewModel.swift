@@ -123,7 +123,6 @@ final class ChatViewModel {
 
     func filterByTag(_ tag: Tag?) {
         selectedTag = tag
-        fetchMessages()
     }
 
     func clearError() {
