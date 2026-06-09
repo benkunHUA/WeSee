@@ -15,6 +15,7 @@ final class Message {
     var timestamp: Date
     var isFromMe: Bool
     var isBookmarked: Bool
+    @Relationship(inverse: \Tag.messages)
     var tags: [Tag]
 
     init(content: String, isFromMe: Bool, tags: [Tag] = []) {
