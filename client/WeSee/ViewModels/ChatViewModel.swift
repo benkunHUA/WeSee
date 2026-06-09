@@ -20,7 +20,6 @@ final class ChatViewModel {
 
     func configure(with context: ModelContext) {
         self.modelContext = context
-        fetchMessages()
     }
 
     // MARK: - Messages
@@ -44,16 +43,19 @@ final class ChatViewModel {
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= 5000 else { return }
 
-        guard let context = modelContext else {
-            let msg = Message(content: trimmed, isFromMe: isFromMe, tags: tags)
-            messages.append(msg)
-            return
-        }
-
         let msg = Message(content: trimmed, isFromMe: isFromMe, tags: tags)
+        messages.append(msg)
+
+        guard let context = modelContext else { return }
         context.insert(msg)
         try? context.save()
-        fetchMessages()
+    }
+
+    func newConversation() {
+        messages = []
+        selectedTag = nil
+        streamingContent = ""
+        isStreaming = false
     }
 
     // MARK: - Send with streaming

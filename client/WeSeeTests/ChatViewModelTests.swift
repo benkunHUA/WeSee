@@ -56,4 +56,14 @@ struct ChatViewModelTests {
         #expect(viewModel.messages.first?.isFromMe == true)
         #expect(viewModel.messages.first?.content == "Hello")
     }
+
+    @Test func newConversationClearsMessages() {
+        let viewModel = ChatViewModel()
+        viewModel.addMessage(content: "msg1", isFromMe: true)
+        viewModel.addMessage(content: "msg2", isFromMe: false)
+        viewModel.newConversation()
+        #expect(viewModel.messages.isEmpty)
+        #expect(viewModel.selectedTag == nil)
+        #expect(viewModel.isStreaming == false)
+    }
 }

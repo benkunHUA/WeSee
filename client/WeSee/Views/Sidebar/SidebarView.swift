@@ -10,7 +10,7 @@ struct SidebarView: View {
             Section {
                 FunctionMenuView(
                     onNewConversation: {
-                        chatViewModel.filterByTag(nil)
+                        chatViewModel.newConversation()
                     },
                     onScheduledTasks: {
                         showScheduledTasks = true
