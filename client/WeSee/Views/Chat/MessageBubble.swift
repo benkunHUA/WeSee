@@ -1,8 +1,33 @@
 import SwiftUI
 
+struct TagChipView: View {
+    let tag: Tag
+    let onClick: () -> Void
+
+    var body: some View {
+        Button(action: onClick) {
+            HStack(spacing: 3) {
+                Circle()
+                    .fill(Color(hex: tag.colorHex) ?? .blue)
+                    .frame(width: 6, height: 6)
+                Text(tag.name)
+                    .font(.caption2)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+                Capsule()
+                    .fill(Color(hex: tag.colorHex)?.opacity(0.15) ?? Color.blue.opacity(0.15))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct MessageBubble: View {
     let message: Message
     let onBookmark: () -> Void
+    let onTagClick: (Tag) -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -37,6 +62,16 @@ struct MessageBubble: View {
                                 .foregroundStyle(message.isBookmarked ? .yellow : .secondary)
                         }
                         .buttonStyle(.plain)
+                    }
+                }
+
+                if !message.tags.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(message.tags) { tag in
+                            TagChipView(tag: tag) {
+                                onTagClick(tag)
+                            }
+                        }
                     }
                 }
 

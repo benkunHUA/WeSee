@@ -8,7 +8,8 @@ struct ChatView: View {
             MessageListView(
                 messages: viewModel.messages,
                 streamingContent: viewModel.isStreaming ? viewModel.streamingContent : nil,
-                onBookmark: { viewModel.toggleBookmark($0) }
+                onBookmark: { viewModel.toggleBookmark($0) },
+                onTagClick: { viewModel.filterByTag($0) }
             )
 
             Divider()

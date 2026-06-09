@@ -64,7 +64,8 @@ final class ChatViewModel {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= 5000 else { return }
 
-        addMessage(content: trimmed, isFromMe: true)
+        let tags: [Tag] = selectedTag.map { [$0] } ?? []
+        addMessage(content: trimmed, isFromMe: true, tags: tags)
         isSendingDisabled = true
         isStreaming = true
         streamingContent = ""

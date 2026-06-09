@@ -4,11 +4,13 @@ struct MessageListView: View {
     let messages: [Message]
     let streamingContent: String?
     let onBookmark: (Message) -> Void
+    let onTagClick: (Tag) -> Void
 
-    init(messages: [Message], streamingContent: String? = nil, onBookmark: @escaping (Message) -> Void) {
+    init(messages: [Message], streamingContent: String? = nil, onBookmark: @escaping (Message) -> Void, onTagClick: @escaping (Tag) -> Void = { _ in }) {
         self.messages = messages
         self.streamingContent = streamingContent
         self.onBookmark = onBookmark
+        self.onTagClick = onTagClick
     }
 
     var body: some View {
@@ -27,6 +29,8 @@ struct MessageListView: View {
                     ForEach(messages) { message in
                         MessageBubble(message: message) {
                             onBookmark(message)
+                        } onTagClick: { tag in
+                            onTagClick(tag)
                         }
                         .id(message.id)
                     }
