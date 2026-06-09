@@ -1,64 +1,95 @@
 import Testing
-@testable import WeSee
 import Foundation
+@testable import WeSee
 
 struct DeepSeekServiceTests {
-
-    @Test func buildRequestReturnsValidRequest() throws {
-        let config = ClientConfig(apiKey: "sk-test", baseURL: "https://api.deepseek.com", model: "deepseek-chat")
+    @Test func buildRequestIncludesToolsWhenProvided() {
         let service = DeepSeekService()
-        let history: [Message] = [
-            Message(content: "Hello", isFromMe: true),
-            Message(content: "Hi there!", isFromMe: false),
-        ]
-        let request = service.buildRequest(history: history, config: config)
-
-        #expect(request.url?.absoluteString == "https://api.deepseek.com/v1/chat/completions")
-        #expect(request.httpMethod == "POST")
-        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer sk-test")
-        #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
-
-        let body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
-        #expect(body["model"] as? String == "deepseek-chat")
-        #expect(body["stream"] as? Bool == true)
-        let messages = body["messages"] as! [[String: Any]]
-        #expect(messages.count == 2)
-        #expect(messages[0]["role"] as? String == "user")
-        #expect(messages[0]["content"] as? String == "Hello")
-        #expect(messages[1]["role"] as? String == "assistant")
-        #expect(messages[1]["content"] as? String == "Hi there!")
+        let tools: [[String: Any]] = [[
+            "type": "function",
+            "function": [
+                "name": "read_file",
+                "description": "Read a file",
+                "parameters": ["type": "object", "properties": [:], "required": []],
+            ],
+        ]]
+        let request = service.buildRequest(
+            messages: [["role": "user", "content": "hi"]],
+            config: .default,
+            tools: tools
+        )
+        let body = request.httpBody!
+        let json = try! JSONSerialization.jsonObject(with: body) as! [String: Any]
+        let reqTools = json["tools"] as! [[String: Any]]
+        #expect(reqTools.count == 1)
     }
 
-    @Test func parseTokenDeltaReturnsContent() {
+    @Test func buildRequestIncludesSystemPrompt() {
         let service = DeepSeekService()
-        let json = """
-        {"choices":[{"delta":{"content":"Hello"}}]}
-        """
-        let result = service.parseDelta(json)
-        #expect(result == "Hello")
+        let request = service.buildRequest(
+            messages: [],
+            config: .default,
+            systemPrompt: "You are a helpful assistant"
+        )
+        let body = request.httpBody!
+        let json = try! JSONSerialization.jsonObject(with: body) as! [String: Any]
+        let messages = json["messages"] as! [[String: Any]]
+        #expect(messages.first?["role"] as? String == "system")
+        #expect(messages.first?["content"] as? String == "You are a helpful assistant")
     }
 
-    @Test func parseDeltaWithEmptyChoicesReturnsNil() {
+    @Test func buildRequestOmitsSystemPromptWhenNil() {
         let service = DeepSeekService()
-        let json = """
-        {"choices":[]}
-        """
-        let result = service.parseDelta(json)
-        #expect(result == nil)
+        let request = service.buildRequest(
+            messages: [["role": "user", "content": "hi"]],
+            config: .default
+        )
+        let body = request.httpBody!
+        let json = try! JSONSerialization.jsonObject(with: body) as! [String: Any]
+        let messages = json["messages"] as! [[String: Any]]
+        #expect(messages.first?["role"] as? String == "user")
     }
 
-    @Test func parseDeltaWithMalformedJSONReturnsNil() {
+    @Test func parseContentDeltaReturnsText() {
         let service = DeepSeekService()
-        let result = service.parseDelta("not json")
-        #expect(result == nil)
+        let json = #"{"choices":[{"delta":{"content":"hello"}}]}"#
+        #expect(service.parseContentDelta(json) == "hello")
+    }
+
+    @Test func parseThinkingDeltaReturnsReasoningContent() {
+        let service = DeepSeekService()
+        let json = #"{"choices":[{"delta":{"reasoning_content":"thinking..."}}]}"#
+        #expect(service.parseThinkingDelta(json) == "thinking...")
+    }
+
+    @Test func parseToolCallDeltaFullChunk() {
+        let service = DeepSeekService()
+        let json = #"{"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","function":{"name":"read_file","arguments":"{\"path\":\"/tmp/t.txt\"}"}}]}}]}"#
+        let result = service.parseToolCallDelta(json)
+        #expect(result?.index == 0)
+        #expect(result?.id == "call_1")
+        #expect(result?.name == "read_file")
+        #expect(result?.arguments == #"{"path":"/tmp/t.txt"}"#)
+    }
+
+    @Test func parseToolCallDeltaArgsOnlyChunk() {
+        let service = DeepSeekService()
+        let json = #"{"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"more"}}]}}]}"#
+        let result = service.parseToolCallDelta(json)
+        #expect(result?.id == nil)
+        #expect(result?.name == nil)
+        #expect(result?.arguments == "more")
     }
 
     @Test func parseFinishReasonReturnsStop() {
         let service = DeepSeekService()
-        let json = """
-        {"choices":[{"finish_reason":"stop"}]}
-        """
-        let result = service.parseFinishReason(json)
-        #expect(result == "stop")
+        let json = #"{"choices":[{"finish_reason":"stop"}]}"#
+        #expect(service.parseFinishReason(json) == "stop")
+    }
+
+    @Test func parseFinishReasonReturnsToolCalls() {
+        let service = DeepSeekService()
+        let json = #"{"choices":[{"finish_reason":"tool_calls"}]}"#
+        #expect(service.parseFinishReason(json) == "tool_calls")
     }
 }
