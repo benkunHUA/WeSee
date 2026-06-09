@@ -45,9 +45,6 @@ final class LiveRemoteClient: RemoteClient {
                         else { continue }
 
                         switch type {
-                        case "start":
-                            let cid = dict["conversationId"] as? String ?? ""
-                            continuation.yield(.start(conversationId: cid))
                         case "token":
                             let token = dict["data"] as? String ?? ""
                             continuation.yield(.token(token))

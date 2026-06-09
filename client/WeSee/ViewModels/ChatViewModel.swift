@@ -99,8 +99,6 @@ final class ChatViewModel {
                 ) {
                     await MainActor.run {
                         switch event {
-                        case .start(let cid):
-                            self.conversationId = cid
                         case .token(let token):
                             self.streamingContent += token
                         case .done:

@@ -45,10 +45,3 @@ struct ChatRequest: Encodable {
     let content: String
     let conversationId: String?
 }
-
-enum ChatEvent {
-    case start(conversationId: String)
-    case token(String)
-    case done
-    case error(String)
-}
