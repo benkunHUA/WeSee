@@ -21,6 +21,7 @@ final class ShellTool: AgentTool {
 
     private let timeoutSeconds: Int
     private let allowedCommands: Set<String>
+    private let workspaceManager: WorkspaceManager
 
     private static let defaultAllowedCommands: Set<String> = [
         "ls", "cat", "head", "tail", "wc", "grep", "find", "echo",
@@ -31,9 +32,14 @@ final class ShellTool: AgentTool {
         "open", "osascript", "plutil", "defaults", "system_profiler",
     ]
 
-    init(timeoutSeconds: Int = 30, allowedCommands: Set<String>? = nil) {
+    init(
+        timeoutSeconds: Int = 30,
+        allowedCommands: Set<String>? = nil,
+        workspaceManager: WorkspaceManager
+    ) {
         self.timeoutSeconds = timeoutSeconds
         self.allowedCommands = allowedCommands ?? Self.defaultAllowedCommands
+        self.workspaceManager = workspaceManager
     }
 
     func execute(arguments: [String: Any]) async throws -> String {
@@ -44,6 +50,7 @@ final class ShellTool: AgentTool {
             return error
         }
         let workingDir = arguments["working_directory"] as? String
+            ?? workspaceManager.currentURL.path
         return try await runCommand(command, workingDirectory: workingDir)
     }
 
@@ -86,7 +93,7 @@ final class ShellTool: AgentTool {
         if let dir = workingDirectory {
             process.currentDirectoryURL = URL(fileURLWithPath: dir)
         } else {
-            process.currentDirectoryURL = URL(fileURLWithPath: NSHomeDirectory())
+            process.currentDirectoryURL = URL(fileURLWithPath: workspaceManager.currentURL.path)
         }
 
         let stdoutPipe = Pipe()

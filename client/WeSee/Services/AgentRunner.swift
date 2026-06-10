@@ -20,7 +20,7 @@ final class AgentRunner {
     }
 
     private func registerDefaultTools() {
-        toolRegistry.register(ShellTool())
+        toolRegistry.register(ShellTool(workspaceManager: workspaceManager))
         toolRegistry.register(FileSystemTool(workspaceManager: workspaceManager))
         WeSeeLog.info("AgentRunner registered \(toolRegistry.allTools.count) tools")
     }
