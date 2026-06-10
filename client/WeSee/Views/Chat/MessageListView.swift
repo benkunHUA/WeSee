@@ -1,17 +1,10 @@
 import SwiftUI
+import MarkdownUI
 
 struct MessageListView: View {
     let messages: [Message]
     let streamingContent: String?
-    let onBookmark: (Message) -> Void
-    let onTagClick: (Tag) -> Void
-
-    init(messages: [Message], streamingContent: String? = nil, onBookmark: @escaping (Message) -> Void, onTagClick: @escaping (Tag) -> Void = { _ in }) {
-        self.messages = messages
-        self.streamingContent = streamingContent
-        self.onBookmark = onBookmark
-        self.onTagClick = onTagClick
-    }
+    let thinkingContent: String?
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -27,17 +20,16 @@ struct MessageListView: View {
                     }
 
                     ForEach(messages) { message in
-                        MessageBubble(message: message) {
-                            onBookmark(message)
-                        } onTagClick: { tag in
-                            onTagClick(tag)
-                        }
-                        .id(message.id)
+                        MessageBubble(message: message)
+                            .id(message.id)
                     }
 
                     if let streaming = streamingContent, !streaming.isEmpty {
-                        StreamingBubble(content: streaming)
-                            .id("streaming")
+                        StreamingBubble(
+                            content: streaming,
+                            thinkingContent: thinkingContent
+                        )
+                        .id("streaming")
                     }
                 }
                 .padding(.vertical, 8)
@@ -60,26 +52,35 @@ struct MessageListView: View {
 
 struct StreamingBubble: View {
     let content: String
+    let thinkingContent: String?
 
     var body: some View {
         HStack {
             HStack(alignment: .top, spacing: 6) {
-                Text(content)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(nsColor: .controlBackgroundColor))
-                    )
-                    .overlay(alignment: .bottomTrailing) {
-                        if content.isEmpty || content.last != " " {
-                            Circle()
-                                .fill(Color(nsColor: .secondaryLabelColor))
-                                .frame(width: 6, height: 6)
-                                .padding(.trailing, 6)
-                                .padding(.bottom, 4)
-                        }
+                VStack(alignment: .leading, spacing: 0) {
+                    if let thinking = thinkingContent, !thinking.isEmpty {
+                        ThinkingSection(content: thinking, initiallyExpanded: true)
+                        Divider()
+                            .padding(.vertical, 6)
                     }
+
+                    MarkdownContent(content: content)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                )
+                .overlay(alignment: .bottomTrailing) {
+                    if content.isEmpty || thinkingContent != nil || content.last != " " {
+                        Circle()
+                            .fill(Color(nsColor: .secondaryLabelColor))
+                            .frame(width: 6, height: 6)
+                            .padding(.trailing, 6)
+                            .padding(.bottom, 4)
+                    }
+                }
                 Spacer(minLength: 60)
             }
             .padding(.horizontal)

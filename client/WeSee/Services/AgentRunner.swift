@@ -9,7 +9,7 @@ final class AgentRunner {
     init(
         deepSeekService: DeepSeekService = DeepSeekService(),
         toolRegistry: ToolRegistry = ToolRegistry(),
-        maxRounds: Int = 10,
+        maxRounds: Int = 30,
         workspaceManager: WorkspaceManager = WorkspaceManager()
     ) {
         self.deepSeekService = deepSeekService
@@ -22,6 +22,7 @@ final class AgentRunner {
     private func registerDefaultTools() {
         toolRegistry.register(ShellTool(workspaceManager: workspaceManager))
         toolRegistry.register(FileSystemTool(workspaceManager: workspaceManager))
+        toolRegistry.register(ScreenshotTool(workspaceManager: workspaceManager))
         WeSeeLog.info("AgentRunner registered \(toolRegistry.allTools.count) tools")
     }
 
@@ -152,7 +153,10 @@ final class AgentRunner {
                     ])
                     messages.append(contentsOf: toolResultMessages)
 
-                    WeSeeLog.info("AgentRunner round \(round) complete, looping back")
+                    WeSeeLog.info("AgentRunner round \(round) complete, messages=\(messages.count), looping back")
+                if round >= self.maxRounds / 2 {
+                    WeSeeLog.error("AgentRunner WARNING: round \(round)/\(self.maxRounds) — possible infinite loop, messages count: \(messages.count)")
+                }
                 }
 
                 WeSeeLog.error("AgentRunner max rounds reached: \(self.maxRounds)")

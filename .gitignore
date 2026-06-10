@@ -1,7 +1,71 @@
+# Xcode
+*.xcuserstate
+*.xcscmblueprint
+*.xcbkptlist
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+xcuserdata/
+DerivedData/
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Xcode Project
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.pbxproj.bak
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+
+# Build
+build/
+Build/
+.build/
+
+# CocoaPods
+Pods/
+
+# macOS
+.DS_Store
+*.app
+
+# IDE
+.idea/
+.vscode/
+
+# SwiftData / CoreData local stores
+*.store
+*.store-shm
+*.store-wal
+
+# Python (legacy)
 __pycache__/
 .pytest_cache/
 *.pyc
-.DS_Store
-*.db
 .env
 .venv/
+
+# Logs
+*.log
+Logs/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Code Injection
+iOSInjectionProject/

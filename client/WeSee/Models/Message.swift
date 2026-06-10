@@ -1,10 +1,3 @@
-//
-//  Message.swift
-//  WeSee
-//
-//  Created by haobenkun on 2026/6/9.
-//
-
 import Foundation
 import SwiftData
 
@@ -12,19 +5,18 @@ import SwiftData
 final class Message {
     var id: UUID
     var content: String
+    var thinkingContent: String?
+    var attachmentPaths: [String] = []
     var timestamp: Date
     var isFromMe: Bool
-    var isBookmarked: Bool
-    @Relationship(inverse: \Tag.messages)
-    var tags: [Tag]
 
-    init(content: String, isFromMe: Bool, tags: [Tag] = []) {
+    init(content: String, thinkingContent: String? = nil, attachmentPaths: [String] = [], isFromMe: Bool) {
         self.id = UUID()
         self.content = content
+        self.thinkingContent = thinkingContent
+        self.attachmentPaths = attachmentPaths
         self.timestamp = Date()
         self.isFromMe = isFromMe
-        self.isBookmarked = false
-        self.tags = tags
     }
 
     var trimmedContent: String {

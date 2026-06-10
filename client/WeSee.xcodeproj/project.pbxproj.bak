@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		9369737C2FD7C46800572741 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 9369737B2FD7C45F00572741 /* README.md */; };
-		93E7CF6F2FD93F40009E3653 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 2397C22B3F0F4C099301D890 /* MarkdownUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,7 +57,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				93E7CF6F2FD93F40009E3653 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -120,7 +118,6 @@
 			);
 			name = WeSee;
 			packageProductDependencies = (
-				2397C22B3F0F4C099301D890 /* MarkdownUI */,
 			);
 			productName = WeSee;
 			productReference = 93EBB7952FD7BA8E00E13AC4 /* WeSee.app */;
@@ -204,9 +201,6 @@
 			);
 			mainGroup = 93EBB78C2FD7BA8E00E13AC4;
 			minimizedProjectReferenceProxies = 1;
-			packageReferences = (
-				F7FF798676564C0285C9CD16 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
-			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 93EBB7962FD7BA8E00E13AC4 /* Products */;
 			projectDirPath = "";
@@ -564,25 +558,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		F7FF798676564C0285C9CD16 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.0.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		2397C22B3F0F4C099301D890 /* MarkdownUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F7FF798676564C0285C9CD16 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
-			productName = MarkdownUI;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 93EBB78D2FD7BA8E00E13AC4 /* Project object */;
 }

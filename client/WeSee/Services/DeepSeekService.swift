@@ -60,11 +60,11 @@ class DeepSeekService {
                             return
                         }
 
-                        if let delta = parseContentDelta(jsonStr) {
-                            continuation.yield(.token(delta))
-                        }
                         if let thinking = parseThinkingDelta(jsonStr) {
                             continuation.yield(.thinking(thinking))
+                        }
+                        if let delta = parseContentDelta(jsonStr) {
+                            continuation.yield(.token(delta))
                         }
                         if let tcDelta = parseToolCallDelta(jsonStr) {
                             WeSeeLog.debug("LLM tool call delta: index=\(tcDelta.index) name=\(tcDelta.name ?? "nil")")
@@ -117,6 +117,12 @@ class DeepSeekService {
         if !tools.isEmpty {
             body["tools"] = tools
             WeSeeLog.debug("LLM request includes \(tools.count) tools")
+        }
+        if config.enableThinking {
+            body["thinking"] = ["type": "enabled"]
+        }
+        if let effort = config.reasoningEffort {
+            body["reasoning_effort"] = effort
         }
         if let httpBody = try? JSONSerialization.data(withJSONObject: body) {
             request.httpBody = httpBody

@@ -8,13 +8,17 @@ final class ChatViewModel {
     var isSendingDisabled: Bool = false
     var errorMessage: String?
     var streamingContent: String = ""
+    var thinkingContent: String = ""
     var isStreaming: Bool = false
     var toolCallResults: [(id: String, name: String, arguments: [String: Any], result: String?)] = []
+    private var pendingImagePaths: [String] = []
 
     private var modelContext: ModelContext?
     private let agentRunner: AgentRunner
+    private let systemPromptBuilder: SystemPromptBuilder
 
     init(workspaceManager: WorkspaceManager) {
+        self.systemPromptBuilder = SystemPromptBuilder(workspaceManager: workspaceManager)
         self.agentRunner = AgentRunner(workspaceManager: workspaceManager)
     }
 
@@ -38,23 +42,39 @@ final class ChatViewModel {
         }
     }
 
-    func addMessage(content: String, isFromMe: Bool) {
+    func addMessage(
+        content: String,
+        thinkingContent: String? = nil,
+        attachmentPaths: [String] = [],
+        isFromMe: Bool
+    ) {
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= 5000 else { return }
 
-        let msg = Message(content: trimmed, isFromMe: isFromMe)
+        let msg = Message(
+            content: trimmed,
+            thinkingContent: thinkingContent,
+            attachmentPaths: attachmentPaths,
+            isFromMe: isFromMe
+        )
         messages.append(msg)
 
         guard let context = modelContext else { return }
         context.insert(msg)
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            WeSeeLog.error("ChatViewModel.addMessage save error: \(error.localizedDescription)")
+        }
     }
 
     func newConversation() {
         messages = []
         streamingContent = ""
+        thinkingContent = ""
         isStreaming = false
         toolCallResults = []
+        pendingImagePaths = []
     }
 
     func sendMessage(_ text: String) {
@@ -65,7 +85,9 @@ final class ChatViewModel {
         isSendingDisabled = true
         isStreaming = true
         streamingContent = ""
+        thinkingContent = ""
         toolCallResults = []
+        pendingImagePaths = []
 
         WeSeeLog.info("ChatViewModel sending message, history count: \(messages.count)")
 
@@ -87,14 +109,15 @@ final class ChatViewModel {
             do {
                 for try await event in agentRunner.run(
                     history: messages,
-                    config: config
+                    config: config,
+                    systemPrompt: systemPromptBuilder.build()
                 ) {
                     await MainActor.run {
                         switch event {
                         case .token(let token):
                             self.streamingContent += token
                         case .thinking(let text):
-                            self.streamingContent += text
+                            self.thinkingContent += text
                         case .toolCallStart(let id, let name, let arguments):
                             WeSeeLog.info("ChatViewModel toolCallStart: id=\(id) name=\(name)")
                             self.toolCallResults.append(
@@ -105,21 +128,34 @@ final class ChatViewModel {
                             if let index = self.toolCallResults.firstIndex(where: { $0.id == id }) {
                                 self.toolCallResults[index].result = result
                             }
+                            if name == "screenshot" && FileManager.default.fileExists(atPath: result) {
+                                self.pendingImagePaths.append(result)
+                            }
                         case .done:
-                            WeSeeLog.info("ChatViewModel done, streamingContent length: \(self.streamingContent.count)")
+                            WeSeeLog.info("ChatViewModel done, finalLen=\(self.streamingContent.count) thinkingLen=\(self.thinkingContent.count) images=\(self.pendingImagePaths.count)")
                             let finalContent = self.streamingContent
+                            let thinking = self.thinkingContent.trimmingCharacters(in: .whitespacesAndNewlines)
                             if !finalContent.isEmpty {
-                                self.addMessage(content: finalContent, isFromMe: false)
+                                self.addMessage(
+                                    content: finalContent,
+                                    thinkingContent: thinking.isEmpty ? nil : thinking,
+                                    attachmentPaths: self.pendingImagePaths,
+                                    isFromMe: false
+                                )
                             }
                             self.streamingContent = ""
+                            self.thinkingContent = ""
                             self.toolCallResults = []
+                            self.pendingImagePaths = []
                             self.isStreaming = false
                             self.isSendingDisabled = false
                         case .error(let msg):
                             WeSeeLog.error("ChatViewModel error: \(msg)")
                             self.errorMessage = msg
                             self.isStreaming = false
+                            self.thinkingContent = ""
                             self.toolCallResults = []
+                            self.pendingImagePaths = []
                             self.isSendingDisabled = false
                         }
                     }
@@ -129,7 +165,9 @@ final class ChatViewModel {
                     WeSeeLog.error("ChatViewModel outer error: \(error.localizedDescription)")
                     self.errorMessage = error.localizedDescription
                     self.isStreaming = false
+                    self.thinkingContent = ""
                     self.toolCallResults = []
+                    self.pendingImagePaths = []
                     self.isSendingDisabled = false
                 }
             }

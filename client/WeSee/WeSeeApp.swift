@@ -1,10 +1,3 @@
-//
-//  WeSeeApp.swift
-//  WeSee
-//
-//  Created by haobenkun on 2026/6/9.
-//
-
 import SwiftUI
 import SwiftData
 
@@ -14,7 +7,7 @@ struct WeSeeApp: App {
 
     init() {
         do {
-            container = try ModelContainer(for: Message.self, Tag.self, ScheduledTask.self)
+            container = try ModelContainer(for: Message.self, ScheduledTask.self)
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")
         }

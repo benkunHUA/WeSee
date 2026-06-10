@@ -3,6 +3,7 @@ import Foundation
 @Observable
 final class WorkspaceManager {
     var currentURL: URL
+    var screenshotsURL: URL
 
     private let configURL: URL
     private let fileManager: FileManager
@@ -13,6 +14,7 @@ final class WorkspaceManager {
         self.configURL = configURL ?? home.appendingPathComponent(".config/wesee/config.json")
         let defaultURL = home.appendingPathComponent("Documents/WeSee")
         self.currentURL = defaultURL
+        self.screenshotsURL = defaultURL.appendingPathComponent("screenshots")
         load()
         ensureDirectoryExists()
     }
@@ -29,17 +31,31 @@ final class WorkspaceManager {
     private func load() {
         guard fileManager.fileExists(atPath: configURL.path),
               let data = try? Data(contentsOf: configURL),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let workspacePath = json["workspace"] as? String,
-              !workspacePath.isEmpty
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else {
             return
         }
-        let url = URL(fileURLWithPath: workspacePath)
-        if !fileManager.fileExists(atPath: url.path) {
-            try? fileManager.createDirectory(at: url, withIntermediateDirectories: true)
+
+        if let workspacePath = json["workspace"] as? String, !workspacePath.isEmpty {
+            let url = URL(fileURLWithPath: workspacePath)
+            if !fileManager.fileExists(atPath: url.path) {
+                try? fileManager.createDirectory(at: url, withIntermediateDirectories: true)
+            }
+            currentURL = url
         }
-        currentURL = url
+
+        if let screenshotsPath = json["screenshotsPath"] as? String, !screenshotsPath.isEmpty {
+            screenshotsURL = resolveScreenshotsPath(screenshotsPath)
+        } else {
+            screenshotsURL = currentURL.appendingPathComponent("screenshots")
+        }
+    }
+
+    private func resolveScreenshotsPath(_ path: String) -> URL {
+        if path.hasPrefix("/") {
+            return URL(fileURLWithPath: path)
+        }
+        return currentURL.appendingPathComponent(path)
     }
 
     func save() {
@@ -50,6 +66,7 @@ final class WorkspaceManager {
             return
         }
         json["workspace"] = currentURL.path
+        json["screenshotsPath"] = screenshotsURL.path
 
         let dir = configURL.deletingLastPathComponent()
         if !fileManager.fileExists(atPath: dir.path) {
@@ -68,5 +85,6 @@ final class WorkspaceManager {
 
     private func ensureDirectoryExists() {
         try? fileManager.createDirectory(at: currentURL, withIntermediateDirectories: true)
+        try? fileManager.createDirectory(at: screenshotsURL, withIntermediateDirectories: true)
     }
 }

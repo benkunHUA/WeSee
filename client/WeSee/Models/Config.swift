@@ -4,30 +4,46 @@ struct ClientConfig: Codable {
     let apiKey: String
     let baseURL: String
     let model: String
+    let enableThinking: Bool
+    let reasoningEffort: String?
 
     static let `default` = ClientConfig(
         apiKey: "",
         baseURL: "https://api.deepseek.com",
-        model: "deepseek-chat"
+        model: "deepseek-v4-pro",
+        enableThinking: true,
+        reasoningEffort: nil
     )
 
     enum CodingKeys: String, CodingKey {
         case apiKey
         case baseURL
         case model
+        case enableThinking
+        case reasoningEffort
     }
 
-    init(apiKey: String, baseURL: String = "https://api.deepseek.com", model: String = "deepseek-chat") {
+    init(
+        apiKey: String,
+        baseURL: String = "https://api.deepseek.com",
+        model: String = "deepseek-v4-pro",
+        enableThinking: Bool = true,
+        reasoningEffort: String? = nil
+    ) {
         self.apiKey = apiKey
         self.baseURL = baseURL
         self.model = model
+        self.enableThinking = enableThinking
+        self.reasoningEffort = reasoningEffort
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         apiKey = try container.decode(String.self, forKey: .apiKey)
         baseURL = try container.decodeIfPresent(String.self, forKey: .baseURL) ?? "https://api.deepseek.com"
-        model = try container.decodeIfPresent(String.self, forKey: .model) ?? "deepseek-chat"
+        model = try container.decodeIfPresent(String.self, forKey: .model) ?? "deepseek-v4-pro"
+        enableThinking = try container.decodeIfPresent(Bool.self, forKey: .enableThinking) ?? true
+        reasoningEffort = try container.decodeIfPresent(String.self, forKey: .reasoningEffort)
     }
 }
 

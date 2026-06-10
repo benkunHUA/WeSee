@@ -8,8 +8,7 @@ struct ChatView: View {
             MessageListView(
                 messages: viewModel.messages,
                 streamingContent: viewModel.isStreaming ? viewModel.streamingContent : nil,
-                onBookmark: { viewModel.toggleBookmark($0) },
-                onTagClick: { viewModel.filterByTag($0) }
+                thinkingContent: viewModel.isStreaming ? viewModel.thinkingContent : nil
             )
 
             Divider()
@@ -21,7 +20,7 @@ struct ChatView: View {
                 }
             )
         }
-        .navigationTitle(viewModel.selectedTag?.name ?? "聊天")
+        .navigationTitle("聊天")
         .overlay(alignment: .top) {
             if let error = viewModel.errorMessage {
                 Text(error)
