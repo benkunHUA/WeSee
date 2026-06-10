@@ -4,8 +4,9 @@ import Foundation
 
 struct FileSystemToolTests {
     @Test func readFileReturnsContent() async throws {
+        let configURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-config-\(UUID().uuidString).json")
         let tmpDir = FileManager.default.temporaryDirectory.path
-        let wm = WorkspaceManager()
+        let wm = WorkspaceManager(configURL: configURL)
         wm.update(path: tmpDir)
         let tool = FileSystemTool(workspaceManager: wm)
         try "hello world".write(toFile: tmpDir + "/test_read.txt", atomically: true, encoding: .utf8)
@@ -14,7 +15,8 @@ struct FileSystemToolTests {
     }
 
     @Test func readFileNotFoundReturnsError() async throws {
-        let wm = WorkspaceManager()
+        let configURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-config-\(UUID().uuidString).json")
+        let wm = WorkspaceManager(configURL: configURL)
         wm.update(path: FileManager.default.temporaryDirectory.path)
         let tool = FileSystemTool(workspaceManager: wm)
         let result = try await tool.execute(arguments: ["action": "read_file", "path": "nonexistent.txt"])
@@ -22,8 +24,9 @@ struct FileSystemToolTests {
     }
 
     @Test func writeFileCreatesFile() async throws {
+        let configURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-config-\(UUID().uuidString).json")
         let tmpDir = FileManager.default.temporaryDirectory.path
-        let wm = WorkspaceManager()
+        let wm = WorkspaceManager(configURL: configURL)
         wm.update(path: tmpDir)
         let tool = FileSystemTool(workspaceManager: wm)
         let result = try await tool.execute(arguments: [
@@ -35,8 +38,9 @@ struct FileSystemToolTests {
     }
 
     @Test func listDirectoryReturnsContents() async throws {
+        let configURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-config-\(UUID().uuidString).json")
         let tmpDir = FileManager.default.temporaryDirectory.path
-        let wm = WorkspaceManager()
+        let wm = WorkspaceManager(configURL: configURL)
         wm.update(path: tmpDir)
         let tool = FileSystemTool(workspaceManager: wm)
         let result = try await tool.execute(arguments: [
@@ -46,8 +50,9 @@ struct FileSystemToolTests {
     }
 
     @Test func listDirectoryNotFoundReturnsError() async throws {
+        let configURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-config-\(UUID().uuidString).json")
         let tmpDir = FileManager.default.temporaryDirectory.path
-        let wm = WorkspaceManager()
+        let wm = WorkspaceManager(configURL: configURL)
         wm.update(path: tmpDir)
         let tool = FileSystemTool(workspaceManager: wm)
         let result = try await tool.execute(arguments: [
@@ -57,8 +62,9 @@ struct FileSystemToolTests {
     }
 
     @Test func unknownActionReturnsError() async throws {
+        let configURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-config-\(UUID().uuidString).json")
         let tmpDir = FileManager.default.temporaryDirectory.path
-        let wm = WorkspaceManager()
+        let wm = WorkspaceManager(configURL: configURL)
         wm.update(path: tmpDir)
         let tool = FileSystemTool(workspaceManager: wm)
         let result = try await tool.execute(arguments: ["action": "delete_file", "path": "test.txt"])
@@ -66,8 +72,9 @@ struct FileSystemToolTests {
     }
 
     @Test func pathTraversalIsRejected() async throws {
+        let configURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-config-\(UUID().uuidString).json")
         let tmpDir = FileManager.default.temporaryDirectory.path
-        let wm = WorkspaceManager()
+        let wm = WorkspaceManager(configURL: configURL)
         wm.update(path: tmpDir)
         let tool = FileSystemTool(workspaceManager: wm)
         let result = try await tool.execute(arguments: [
