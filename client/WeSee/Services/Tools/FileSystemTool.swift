@@ -25,21 +25,16 @@ final class FileSystemTool: AgentTool {
 
     private let fileManager: FileManager
     private let maxFileSize: Int
-    private let rootDirectory: String
+    private let workspaceManager: WorkspaceManager
 
     init(
         fileManager: FileManager = .default,
         maxFileSize: Int = 1_000_000,
-        rootDirectory: String? = nil
+        workspaceManager: WorkspaceManager
     ) {
         self.fileManager = fileManager
         self.maxFileSize = maxFileSize
-        if let root = rootDirectory {
-            self.rootDirectory = root
-        } else {
-            let home = fileManager.homeDirectoryForCurrentUser.path
-            self.rootDirectory = (home as NSString).appendingPathComponent("Documents/WeSee")
-        }
+        self.workspaceManager = workspaceManager
     }
 
     func execute(arguments: [String: Any]) async throws -> String {
@@ -61,10 +56,11 @@ final class FileSystemTool: AgentTool {
     }
 
     private func resolveSafePath(_ relativePath: String) -> String? {
-        let resolved = ((rootDirectory as NSString)
+        let root = workspaceManager.currentURL.path
+        let resolved = ((root as NSString)
             .appendingPathComponent(relativePath) as NSString)
             .standardizingPath
-        let rootStandardized = (rootDirectory as NSString).standardizingPath
+        let rootStandardized = (root as NSString).standardizingPath
         guard resolved.hasPrefix(rootStandardized) else { return nil }
         return resolved
     }

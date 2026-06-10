@@ -5,22 +5,27 @@ import Foundation
 struct FileSystemToolTests {
     @Test func readFileReturnsContent() async throws {
         let tmpDir = FileManager.default.temporaryDirectory.path
-        let tool = FileSystemTool(rootDirectory: tmpDir)
+        let wm = WorkspaceManager()
+        wm.update(path: tmpDir)
+        let tool = FileSystemTool(workspaceManager: wm)
         try "hello world".write(toFile: tmpDir + "/test_read.txt", atomically: true, encoding: .utf8)
         let result = try await tool.execute(arguments: ["action": "read_file", "path": "test_read.txt"])
         #expect(result == "hello world")
     }
 
     @Test func readFileNotFoundReturnsError() async throws {
-        let tmpDir = FileManager.default.temporaryDirectory.path
-        let tool = FileSystemTool(rootDirectory: tmpDir)
+        let wm = WorkspaceManager()
+        wm.update(path: FileManager.default.temporaryDirectory.path)
+        let tool = FileSystemTool(workspaceManager: wm)
         let result = try await tool.execute(arguments: ["action": "read_file", "path": "nonexistent.txt"])
         #expect(result.hasPrefix("Error: file not found"))
     }
 
     @Test func writeFileCreatesFile() async throws {
         let tmpDir = FileManager.default.temporaryDirectory.path
-        let tool = FileSystemTool(rootDirectory: tmpDir)
+        let wm = WorkspaceManager()
+        wm.update(path: tmpDir)
+        let tool = FileSystemTool(workspaceManager: wm)
         let result = try await tool.execute(arguments: [
             "action": "write_file", "path": "test_write.txt", "content": "test content",
         ])
@@ -31,7 +36,9 @@ struct FileSystemToolTests {
 
     @Test func listDirectoryReturnsContents() async throws {
         let tmpDir = FileManager.default.temporaryDirectory.path
-        let tool = FileSystemTool(rootDirectory: tmpDir)
+        let wm = WorkspaceManager()
+        wm.update(path: tmpDir)
+        let tool = FileSystemTool(workspaceManager: wm)
         let result = try await tool.execute(arguments: [
             "action": "list_directory", "path": ".",
         ])
@@ -40,7 +47,9 @@ struct FileSystemToolTests {
 
     @Test func listDirectoryNotFoundReturnsError() async throws {
         let tmpDir = FileManager.default.temporaryDirectory.path
-        let tool = FileSystemTool(rootDirectory: tmpDir)
+        let wm = WorkspaceManager()
+        wm.update(path: tmpDir)
+        let tool = FileSystemTool(workspaceManager: wm)
         let result = try await tool.execute(arguments: [
             "action": "list_directory", "path": "nonexistent",
         ])
@@ -49,14 +58,18 @@ struct FileSystemToolTests {
 
     @Test func unknownActionReturnsError() async throws {
         let tmpDir = FileManager.default.temporaryDirectory.path
-        let tool = FileSystemTool(rootDirectory: tmpDir)
+        let wm = WorkspaceManager()
+        wm.update(path: tmpDir)
+        let tool = FileSystemTool(workspaceManager: wm)
         let result = try await tool.execute(arguments: ["action": "delete_file", "path": "test.txt"])
         #expect(result.hasPrefix("Error: unknown action"))
     }
 
     @Test func pathTraversalIsRejected() async throws {
         let tmpDir = FileManager.default.temporaryDirectory.path
-        let tool = FileSystemTool(rootDirectory: tmpDir)
+        let wm = WorkspaceManager()
+        wm.update(path: tmpDir)
+        let tool = FileSystemTool(workspaceManager: wm)
         let result = try await tool.execute(arguments: [
             "action": "read_file", "path": "../etc/passwd",
         ])
