@@ -43,10 +43,11 @@ final class WorkspaceManager {
     }
 
     func save() {
-        var json: [String: Any] = [:]
-        if let data = try? Data(contentsOf: configURL),
-           let existing = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            json = existing
+        guard fileManager.fileExists(atPath: configURL.path),
+              let data = try? Data(contentsOf: configURL),
+              var json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return
         }
         json["workspace"] = currentURL.path
 

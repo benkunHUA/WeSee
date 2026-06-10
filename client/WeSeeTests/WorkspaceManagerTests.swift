@@ -35,6 +35,11 @@ struct WorkspaceManagerTests {
 
     @Test func saveWritesToConfigFile() {
         let configURL = tempConfigURL()
+        // Save requires the config file to already exist
+        let initial: [String: Any] = ["apiKey": "test-key"]
+        let initialData = try! JSONSerialization.data(withJSONObject: initial)
+        try! initialData.write(to: configURL)
+
         let wm = WorkspaceManager(configURL: configURL)
         let tmpDir = FileManager.default.temporaryDirectory.appendingPathComponent("test_ws_save").path
         wm.update(path: tmpDir)
@@ -47,17 +52,24 @@ struct WorkspaceManagerTests {
             return
         }
         #expect(json["workspace"] as? String == tmpDir)
+        #expect(json["apiKey"] as? String == "test-key")
     }
 
     @Test func loadReadsExistingWorkspaceFromConfig() {
         let configURL = tempConfigURL()
-        // Create a fresh WM with a known path, save it
-        let first = WorkspaceManager(configURL: configURL)
+        // Save requires the config file to already exist
+        let initial: [String: Any] = ["apiKey": "test-key"]
+        let initialData = try! JSONSerialization.data(withJSONObject: initial)
+        try! initialData.write(to: configURL)
+
         let tmpDir = FileManager.default.temporaryDirectory.appendingPathComponent("test_ws_load").path
         try? FileManager.default.createDirectory(atPath: tmpDir, withIntermediateDirectories: true)
+
+        // First WM loads apiKey-only config, then saves workspace
+        let first = WorkspaceManager(configURL: configURL)
         first.update(path: tmpDir)
 
-        // Create a second WM — it should load the saved path
+        // Second WM should load the saved path
         let second = WorkspaceManager(configURL: configURL)
         #expect(second.currentURL.path == tmpDir)
     }
