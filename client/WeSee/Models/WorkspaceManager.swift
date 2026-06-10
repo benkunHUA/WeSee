@@ -7,10 +7,10 @@ final class WorkspaceManager {
     private let configURL: URL
     private let fileManager: FileManager
 
-    init(fileManager: FileManager = .default) {
+    init(fileManager: FileManager = .default, configURL: URL? = nil) {
         self.fileManager = fileManager
         let home = fileManager.homeDirectoryForCurrentUser
-        self.configURL = home.appendingPathComponent(".config/wesee/config.json")
+        self.configURL = configURL ?? home.appendingPathComponent(".config/wesee/config.json")
         let defaultURL = home.appendingPathComponent("Documents/WeSee")
         self.currentURL = defaultURL
         load()
@@ -18,7 +18,7 @@ final class WorkspaceManager {
     }
 
     func update(path: String) {
-        let url = URL(fileURLWithPath: path)
+        let url = URL(fileURLWithPath: path).standardizedFileURL
         currentURL = url
         ensureDirectoryExists()
         save()
@@ -33,7 +33,6 @@ final class WorkspaceManager {
               let workspacePath = json["workspace"] as? String,
               !workspacePath.isEmpty
         else {
-            save()
             return
         }
         let url = URL(fileURLWithPath: workspacePath)
@@ -56,9 +55,14 @@ final class WorkspaceManager {
             try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
         }
         guard let data = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted) else {
+            WeSeeLog.error("WorkspaceManager: Failed to serialize config JSON")
             return
         }
-        try? data.write(to: configURL)
+        do {
+            try data.write(to: configURL)
+        } catch {
+            WeSeeLog.error("WorkspaceManager: Failed to save config: \(error.localizedDescription)")
+        }
     }
 
     private func ensureDirectoryExists() {
