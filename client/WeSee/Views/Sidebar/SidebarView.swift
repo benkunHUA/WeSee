@@ -6,38 +6,27 @@ struct SidebarView: View {
     @State private var showScheduledTasks = false
 
     var body: some View {
-        List {
-            Section {
-                FunctionMenuView(
-                    onNewConversation: {
-                        chatViewModel.newConversation()
-                    },
-                    onScheduledTasks: {
-                        showScheduledTasks = true
-                    }
-                )
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
+        VStack(spacing: 0) {
+            List {
+                Section {
+                    FunctionMenuView(
+                        onNewConversation: {
+                            chatViewModel.newConversation()
+                        },
+                        onScheduledTasks: {
+                            showScheduledTasks = true
+                        }
+                    )
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                }
             }
+            .listStyle(.sidebar)
 
-            Section {
-                TagFilterListView(
-                    tags: viewModel.tags,
-                    selectedTag: chatViewModel.selectedTag,
-                    onSelectTag: { tag in
-                        chatViewModel.filterByTag(tag)
-                    },
-                    onCreateTag: { name in
-                        viewModel.createTag(name: name)
-                    }
-                )
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-            } header: {
-                Text("标签")
-            }
+            Divider()
+
+            WorkspaceSectionView(workspaceManager: viewModel.workspaceManager)
         }
-        .listStyle(.sidebar)
         .sheet(isPresented: $showScheduledTasks) {
             ScheduledTaskSheet(viewModel: viewModel)
         }
