@@ -45,10 +45,13 @@ struct AgentRunnerTests {
             .token(" world"),
             .finishReason("stop"),
         ]
+        let configURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-ar-config-\(UUID().uuidString).json")
+        let wm = WorkspaceManager(configURL: configURL)
         let runner = AgentRunner(
             deepSeekService: mockService,
             toolRegistry: registry,
-            maxRounds: 10
+            maxRounds: 10,
+            workspaceManager: wm
         )
         let history = [Message(content: "hi", isFromMe: true)]
 
@@ -77,10 +80,13 @@ struct AgentRunnerTests {
             .finishReason("tool_calls"),
         ]
 
+        let configURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-ar-config-\(UUID().uuidString).json")
+        let wm = WorkspaceManager(configURL: configURL)
         let runner = AgentRunner(
             deepSeekService: mockService,
             toolRegistry: registry,
-            maxRounds: 10
+            maxRounds: 10,
+            workspaceManager: wm
         )
         let history = [Message(content: "echo test", isFromMe: true)]
 
@@ -118,10 +124,13 @@ struct AgentRunnerTests {
             .finishReason("tool_calls"),
         ]
 
+        let configURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-ar-config-\(UUID().uuidString).json")
+        let wm = WorkspaceManager(configURL: configURL)
         let runner = AgentRunner(
             deepSeekService: mockService,
             toolRegistry: registry,
-            maxRounds: 10
+            maxRounds: 10,
+            workspaceManager: wm
         )
         let history = [Message(content: "use tool", isFromMe: true)]
 
