@@ -7,8 +7,9 @@ struct ContentView: View {
     @State private var sidebarViewModel: SidebarViewModel
 
     init() {
-        _chatViewModel = State(initialValue: ChatViewModel())
-        _sidebarViewModel = State(initialValue: SidebarViewModel())
+        let wm = WorkspaceManager()
+        _chatViewModel = State(initialValue: ChatViewModel(workspaceManager: wm))
+        _sidebarViewModel = State(initialValue: SidebarViewModel(workspaceManager: wm))
     }
 
     var body: some View {

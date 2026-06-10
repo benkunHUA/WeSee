@@ -14,21 +14,27 @@ final class ChatViewModel {
     private var modelContext: ModelContext?
     private let agentRunner: AgentRunner
 
-    init(agentRunner: AgentRunner = AgentRunner()) {
-        self.agentRunner = agentRunner
+    init(workspaceManager: WorkspaceManager) {
+        self.agentRunner = AgentRunner(workspaceManager: workspaceManager)
     }
 
     func configure(with context: ModelContext) {
         self.modelContext = context
+        WeSeeLog.info("ChatViewModel configured with ModelContext")
     }
 
     func fetchMessages() {
-        guard let context = modelContext else { return }
+        guard let context = modelContext else {
+            WeSeeLog.error("ChatViewModel.fetchMessages: modelContext is nil")
+            return
+        }
         let descriptor = FetchDescriptor<Message>(sortBy: [SortDescriptor(\.timestamp)])
         do {
             messages = try context.fetch(descriptor)
+            WeSeeLog.info("ChatViewModel fetched \(messages.count) messages")
         } catch {
             errorMessage = "加载消息失败"
+            WeSeeLog.error("ChatViewModel fetchMessages error: \(error.localizedDescription)")
         }
     }
 
@@ -61,15 +67,19 @@ final class ChatViewModel {
         streamingContent = ""
         toolCallResults = []
 
+        WeSeeLog.info("ChatViewModel sending message, history count: \(messages.count)")
+
         Task {
             let config: ClientConfig
             do {
                 config = try ConfigLoader.load()
+                WeSeeLog.info("ChatViewModel config loaded: model=\(config.model) baseURL=\(config.baseURL)")
             } catch {
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
                     self.isStreaming = false
                     self.isSendingDisabled = false
+                    WeSeeLog.error("ChatViewModel config load error: \(error.localizedDescription)")
                 }
                 return
             }
@@ -86,14 +96,17 @@ final class ChatViewModel {
                         case .thinking(let text):
                             self.streamingContent += text
                         case .toolCallStart(let id, let name, let arguments):
+                            WeSeeLog.info("ChatViewModel toolCallStart: id=\(id) name=\(name)")
                             self.toolCallResults.append(
                                 (id: id, name: name, arguments: arguments, result: nil)
                             )
                         case .toolCallResult(let id, let name, let result):
+                            WeSeeLog.info("ChatViewModel toolCallResult: id=\(id) name=\(name)")
                             if let index = self.toolCallResults.firstIndex(where: { $0.id == id }) {
                                 self.toolCallResults[index].result = result
                             }
                         case .done:
+                            WeSeeLog.info("ChatViewModel done, streamingContent length: \(self.streamingContent.count)")
                             let finalContent = self.streamingContent
                             if !finalContent.isEmpty {
                                 self.addMessage(content: finalContent, isFromMe: false)
@@ -103,6 +116,7 @@ final class ChatViewModel {
                             self.isStreaming = false
                             self.isSendingDisabled = false
                         case .error(let msg):
+                            WeSeeLog.error("ChatViewModel error: \(msg)")
                             self.errorMessage = msg
                             self.isStreaming = false
                             self.toolCallResults = []
@@ -112,6 +126,7 @@ final class ChatViewModel {
                 }
             } catch {
                 await MainActor.run {
+                    WeSeeLog.error("ChatViewModel outer error: \(error.localizedDescription)")
                     self.errorMessage = error.localizedDescription
                     self.isStreaming = false
                     self.toolCallResults = []
