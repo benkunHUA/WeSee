@@ -139,12 +139,9 @@ final class HttpServer {
         sendRaw(headers, on: connection)
 
         Task {
-            let stream = chatSession.eventStream
+            await chatSession.send(content)
 
-            // Start consuming events BEFORE calling send() to avoid unbuffered stream deadlock
-            async let sendDone: Void = chatSession.send(content)
-
-            for await event in stream {
+            for await event in chatSession.eventStream {
                 switch event {
                 case .token(let text):
                     sendRaw(formatSSE(type: "token", data: ["data": text]), on: connection)
@@ -210,6 +207,6 @@ final class HttpServer {
     }
 
     private func sendRawData(_ data: Data, on connection: NWConnection) {
-        connection.send(content: data, completion: .idempotent)
+        connection.send(content: data, completion: .contentProcessed { _ in })
     }
 }
