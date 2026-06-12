@@ -8,7 +8,14 @@ struct ContentView: View {
 
     init() {
         let wm = WorkspaceManager()
-        _chatViewModel = State(initialValue: ChatViewModel(workspaceManager: wm))
+        let agentRunner = AgentRunner(workspaceManager: wm)
+        let systemPromptBuilder = SystemPromptBuilder(workspaceManager: wm)
+        let session = ChatSessionImpl(
+            agentRunner: agentRunner,
+            workspaceManager: wm,
+            systemPromptBuilder: systemPromptBuilder
+        )
+        _chatViewModel = State(initialValue: ChatViewModel(session: session))
         _sidebarViewModel = State(initialValue: SidebarViewModel(workspaceManager: wm))
     }
 
