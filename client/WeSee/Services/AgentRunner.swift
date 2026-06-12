@@ -1,6 +1,6 @@
 import Foundation
 
-final class AgentRunner {
+class AgentRunner {
     private let deepSeekService: DeepSeekService
     private let toolRegistry: ToolRegistry
     private let maxRounds: Int
