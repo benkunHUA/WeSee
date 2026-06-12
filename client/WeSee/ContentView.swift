@@ -6,10 +6,9 @@ struct ContentView: View {
     @State private var chatViewModel: ChatViewModel
     @State private var sidebarViewModel: SidebarViewModel
 
-    init() {
-        let wm = WorkspaceManager()
-        _chatViewModel = State(initialValue: ChatViewModel(workspaceManager: wm))
-        _sidebarViewModel = State(initialValue: SidebarViewModel(workspaceManager: wm))
+    init(chatSession: ChatSessionImpl) {
+        _chatViewModel = State(initialValue: ChatViewModel(session: chatSession))
+        _sidebarViewModel = State(initialValue: SidebarViewModel(workspaceManager: chatSession.workspaceManager))
     }
 
     var body: some View {
