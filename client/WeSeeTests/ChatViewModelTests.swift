@@ -1,79 +1,94 @@
 import Foundation
 import Testing
+import SwiftData
 @testable import WeSee
+
+final class MockSession: ChatSessionProtocol {
+    var messages: [Message] = []
+    var streamingContent: String = ""
+    var thinkingContent: String = ""
+    var isStreaming: Bool = false
+    var toolCallResults: [(id: String, name: String, arguments: [String: Any], result: String?)] = []
+    var eventStream: AsyncStream<SessionEvent> {
+        AsyncStream { $0.finish() }
+    }
+
+    var sendCalled = false
+    var sendText: String?
+
+    func send(_ text: String) async {
+        sendCalled = true
+        sendText = text
+    }
+
+    func newConversation() {
+        messages = []
+        toolCallResults = []
+        isStreaming = false
+        streamingContent = ""
+        thinkingContent = ""
+    }
+
+    func configure(with modelContext: ModelContext) {}
+    func fetchMessages() {}
+    func clearError() {}
+}
 
 struct ChatViewModelTests {
 
-    private func makeViewModel() -> ChatViewModel {
-        let configURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("test-cvm-config-\(UUID().uuidString).json")
-        let wm = WorkspaceManager(configURL: configURL)
-        return ChatViewModel(workspaceManager: wm)
+    private func makeViewModel() -> (ChatViewModel, MockSession) {
+        let session = MockSession()
+        let vm = ChatViewModel(session: session)
+        return (vm, session)
     }
 
-    @Test func addMessageAppendsToMessages() {
-        let viewModel = makeViewModel()
-        viewModel.addMessage(content: "Hello", isFromMe: true)
-        #expect(viewModel.messages.count == 1)
-        #expect(viewModel.messages.first?.content == "Hello")
-    }
-
-    @Test func addEmptyMessageIsIgnored() {
-        let viewModel = makeViewModel()
-        viewModel.addMessage(content: "", isFromMe: true)
-        viewModel.addMessage(content: "   ", isFromMe: true)
-        #expect(viewModel.messages.isEmpty)
-    }
-
-    @Test func addWhitespaceOnlyMessageIsIgnored() {
-        let viewModel = makeViewModel()
-        viewModel.addMessage(content: "\n\n", isFromMe: true)
-        #expect(viewModel.messages.isEmpty)
-    }
-
-    @Test func isSendingDisabledBlocksRapidSend() {
-        let viewModel = makeViewModel()
+    @Test func isSendingDisabledBlocksRapidSend() async {
+        let (viewModel, session) = makeViewModel()
+        session.messages = [Message(content: "reply", isFromMe: false)]
         viewModel.sendMessage("msg1")
         #expect(viewModel.isSendingDisabled == true)
     }
 
     @Test func clearErrorSetsErrorMessageToNil() {
-        let viewModel = makeViewModel()
+        let (viewModel, _) = makeViewModel()
         viewModel.errorMessage = "test error"
         viewModel.clearError()
         #expect(viewModel.errorMessage == nil)
     }
 
-    @Test func sendMessageSetsStreamingContent() {
-        let viewModel = makeViewModel()
+    @Test func sendMessageDelegatesToSession() {
+        let (viewModel, session) = makeViewModel()
         viewModel.sendMessage("Hello")
-        #expect(viewModel.isStreaming == true)
-        #expect(viewModel.streamingContent == "")
+        #expect(session.sendCalled == true)
+        #expect(session.sendText == "Hello")
     }
 
-    @Test func sendMessageAppendsUserMessage() {
-        let viewModel = makeViewModel()
-        viewModel.sendMessage("Hello")
-        #expect(viewModel.messages.count == 1)
-        #expect(viewModel.messages.first?.isFromMe == true)
-        #expect(viewModel.messages.first?.content == "Hello")
-    }
-
-    @Test func newConversationClearsMessages() {
-        let viewModel = makeViewModel()
-        viewModel.addMessage(content: "msg1", isFromMe: true)
-        viewModel.addMessage(content: "msg2", isFromMe: false)
+    @Test func newConversationDelegatesToSession() {
+        let (viewModel, session) = makeViewModel()
+        session.messages = [Message(content: "msg1", isFromMe: true)]
         viewModel.newConversation()
         #expect(viewModel.messages.isEmpty)
         #expect(viewModel.isStreaming == false)
     }
 
     @Test func newConversationClearsToolCallResults() {
-        let viewModel = makeViewModel()
+        let (viewModel, _) = makeViewModel()
         viewModel.toolCallResults = [
             (id: "1", name: "echo", arguments: [:], result: nil),
         ]
         viewModel.newConversation()
         #expect(viewModel.toolCallResults.isEmpty)
+    }
+
+    @Test func syncStateCopiesSessionProperties() {
+        let (viewModel, session) = makeViewModel()
+        let msg = Message(content: "test", isFromMe: true)
+        session.messages = [msg]
+        session.streamingContent = "streaming..."
+        session.isStreaming = true
+        viewModel.fetchMessages()
+        #expect(viewModel.messages.count == 1)
+        #expect(viewModel.streamingContent == "streaming...")
+        #expect(viewModel.isStreaming == true)
     }
 }
