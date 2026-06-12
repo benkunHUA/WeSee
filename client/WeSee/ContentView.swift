@@ -6,17 +6,9 @@ struct ContentView: View {
     @State private var chatViewModel: ChatViewModel
     @State private var sidebarViewModel: SidebarViewModel
 
-    init() {
-        let wm = WorkspaceManager()
-        let agentRunner = AgentRunner(workspaceManager: wm)
-        let systemPromptBuilder = SystemPromptBuilder(workspaceManager: wm)
-        let session = ChatSessionImpl(
-            agentRunner: agentRunner,
-            workspaceManager: wm,
-            systemPromptBuilder: systemPromptBuilder
-        )
-        _chatViewModel = State(initialValue: ChatViewModel(session: session))
-        _sidebarViewModel = State(initialValue: SidebarViewModel(workspaceManager: wm))
+    init(chatSession: ChatSessionImpl) {
+        _chatViewModel = State(initialValue: ChatViewModel(session: chatSession))
+        _sidebarViewModel = State(initialValue: SidebarViewModel(workspaceManager: chatSession.workspaceManager))
     }
 
     var body: some View {
