@@ -6,13 +6,15 @@ struct ClientConfig: Codable {
     let model: String
     let enableThinking: Bool
     let reasoningEffort: String?
+    let httpPort: UInt16
 
     static let `default` = ClientConfig(
         apiKey: "",
         baseURL: "https://api.deepseek.com",
         model: "deepseek-v4-pro",
         enableThinking: true,
-        reasoningEffort: nil
+        reasoningEffort: nil,
+        httpPort: 8080
     )
 
     enum CodingKeys: String, CodingKey {
@@ -21,6 +23,7 @@ struct ClientConfig: Codable {
         case model
         case enableThinking
         case reasoningEffort
+        case httpPort
     }
 
     init(
@@ -28,13 +31,15 @@ struct ClientConfig: Codable {
         baseURL: String = "https://api.deepseek.com",
         model: String = "deepseek-v4-pro",
         enableThinking: Bool = true,
-        reasoningEffort: String? = nil
+        reasoningEffort: String? = nil,
+        httpPort: UInt16 = 8080
     ) {
         self.apiKey = apiKey
         self.baseURL = baseURL
         self.model = model
         self.enableThinking = enableThinking
         self.reasoningEffort = reasoningEffort
+        self.httpPort = httpPort
     }
 
     init(from decoder: Decoder) throws {
@@ -44,6 +49,7 @@ struct ClientConfig: Codable {
         model = try container.decodeIfPresent(String.self, forKey: .model) ?? "deepseek-v4-pro"
         enableThinking = try container.decodeIfPresent(Bool.self, forKey: .enableThinking) ?? true
         reasoningEffort = try container.decodeIfPresent(String.self, forKey: .reasoningEffort)
+        httpPort = try container.decodeIfPresent(UInt16.self, forKey: .httpPort) ?? 8080
     }
 }
 

@@ -4,7 +4,7 @@ class AgentRunner {
     private let deepSeekService: DeepSeekService
     private let toolRegistry: ToolRegistry
     private let maxRounds: Int
-    private let workspaceManager: WorkspaceManager
+    let workspaceManager: WorkspaceManager
 
     init(
         deepSeekService: DeepSeekService = DeepSeekService(),
