@@ -35,7 +35,7 @@ final class ChatSessionImpl: ChatSessionProtocol {
     private var pendingImagePaths: [String] = []
     private var eventContinuation: AsyncStream<SessionEvent>.Continuation?
     private(set) lazy var eventStream: AsyncStream<SessionEvent> = {
-        AsyncStream { continuation in
+        AsyncStream(SessionEvent.self, bufferingPolicy: .bufferingNewest(256)) { continuation in
             self.eventContinuation = continuation
         }
     }()
