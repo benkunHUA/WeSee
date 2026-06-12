@@ -14,6 +14,7 @@ protocol ChatSessionProtocol: AnyObject {
     func newConversation()
     func configure(with modelContext: ModelContext)
     func fetchMessages()
+    var eventStream: AsyncStream<SessionEvent> { get }
     func clearError()
 }
 
@@ -32,6 +33,12 @@ final class ChatSessionImpl: ChatSessionProtocol {
     let workspaceManager: WorkspaceManager
     private let systemPromptBuilder: SystemPromptBuilder
     private var pendingImagePaths: [String] = []
+    private var eventContinuation: AsyncStream<SessionEvent>.Continuation?
+    private(set) lazy var eventStream: AsyncStream<SessionEvent> = {
+        AsyncStream { continuation in
+            self.eventContinuation = continuation
+        }
+    }()
 
     init(
         agentRunner: AgentRunner,
@@ -91,12 +98,15 @@ final class ChatSessionImpl: ChatSessionProtocol {
                 switch event {
                 case .token(let token):
                     streamingContent += token
+                    eventContinuation?.yield(.token(token))
                 case .thinking(let text):
                     thinkingContent += text
+                    eventContinuation?.yield(.thinking(text))
                 case .toolCallStart(let id, let name, let arguments):
                     toolCallResults.append(
                         (id: id, name: name, arguments: arguments, result: nil)
                     )
+                    eventContinuation?.yield(.toolCallStart(id: id, name: name, arguments: arguments))
                 case .toolCallResult(let id, let name, let result):
                     if let index = toolCallResults.firstIndex(where: { $0.id == id }) {
                         toolCallResults[index].result = result
@@ -104,6 +114,7 @@ final class ChatSessionImpl: ChatSessionProtocol {
                     if name == "screenshot" && FileManager.default.fileExists(atPath: result) {
                         pendingImagePaths.append(result)
                     }
+                    eventContinuation?.yield(.toolCallResult(id: id, name: name, result: result))
                 case .done:
                     let finalContent = streamingContent
                     let thinking = thinkingContent.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -120,12 +131,14 @@ final class ChatSessionImpl: ChatSessionProtocol {
                     toolCallResults = []
                     pendingImagePaths = []
                     isStreaming = false
+                    eventContinuation?.yield(.done)
                 case .error(let msg):
                     streamingContent = ""
                     thinkingContent = ""
                     toolCallResults = []
                     pendingImagePaths = []
                     isStreaming = false
+                    eventContinuation?.yield(.error(msg))
                 }
             }
         } catch {

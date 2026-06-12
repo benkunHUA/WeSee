@@ -40,9 +40,25 @@ final class ChatViewModel {
 
         Task {
             await session.send(text)
-            await MainActor.run {
-                syncState()
-                isSendingDisabled = false
+
+            for await event in session.eventStream {
+                await MainActor.run {
+                    switch event {
+                    case .token, .thinking:
+                        streamingContent = session.streamingContent
+                        thinkingContent = session.thinkingContent
+                        isStreaming = session.isStreaming
+                    case .toolCallStart, .toolCallResult:
+                        toolCallResults = session.toolCallResults
+                    case .done:
+                        syncState()
+                        isSendingDisabled = false
+                    case .error(let msg):
+                        errorMessage = msg
+                        syncState()
+                        isSendingDisabled = false
+                    }
+                }
             }
         }
     }

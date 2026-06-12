@@ -141,31 +141,33 @@ final class HttpServer {
         Task {
             await chatSession.send(content)
 
-            var seenContent = ""
-            while true {
-                let content = await MainActor.run { chatSession.streamingContent }
-                let isStreaming = await MainActor.run { chatSession.isStreaming }
-
-                if content.count > seenContent.count {
-                    let newPart = String(content.dropFirst(seenContent.count))
-                    seenContent = content
-                    let sse = formatSSE(type: "token", data: ["data": newPart])
-                    sendRaw(sse, on: connection)
+            for await event in chatSession.eventStream {
+                switch event {
+                case .token(let text):
+                    sendRaw(formatSSE(type: "token", data: ["data": text]), on: connection)
+                case .thinking(let text):
+                    sendRaw(formatSSE(type: "thinking", data: ["data": text]), on: connection)
+                case .toolCallStart(let id, let name, let arguments):
+                    sendRaw(formatSSE(type: "toolCall", data: [
+                        "id": id, "name": name, "arguments": arguments
+                    ]), on: connection)
+                case .toolCallResult(let id, let name, let result):
+                    sendRaw(formatSSE(type: "toolResult", data: [
+                        "id": id, "name": name, "result": result
+                    ]), on: connection)
+                case .done:
+                    sendRaw(formatSSE(type: "done", data: [:]), on: connection)
+                    sendRaw("data: [DONE]\n\n", on: connection)
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) { connection.cancel() }
+                    return
+                case .error(let msg):
+                    sendRaw(formatSSE(type: "error", data: ["data": msg]), on: connection)
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) { connection.cancel() }
+                    return
                 }
-
-                if !isStreaming && !content.isEmpty {
-                    break
-                }
-
-                try? await Task.sleep(nanoseconds: 50_000_000)
             }
 
-            sendRaw(formatSSE(type: "done", data: [:]), on: connection)
-            sendRaw("data: [DONE]\n\n", on: connection)
-
-            DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) {
-                connection.cancel()
-            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) { connection.cancel() }
         }
     }
 
