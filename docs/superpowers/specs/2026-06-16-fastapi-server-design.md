@@ -44,6 +44,8 @@
 {"type": "update_workspace", "path": "/Users/xxx/projects"}
 ```
 
+> 注意：API Key、model 等 LLM 配置由服务端管理，客户端无需携带。客户端仅发送工作目录路径用于工具执行。
+
 服务端 → 客户端:
 ```json
 {"type": "token", "data": "Hello"}
@@ -84,6 +86,7 @@ langchain>=0.3.0
 langchain-openai>=0.2.0
 langgraph>=0.2.0
 pydantic>=2.0.0
+pydantic-settings>=2.0.0
 ```
 
 ## 项目结构
@@ -92,7 +95,7 @@ pydantic>=2.0.0
 server/
 ├── main.py                    # FastAPI 入口，路由注册，生命周期管理
 ├── pyproject.toml             # uv 项目配置 + 依赖
-├── config.py                  # 配置管理（读取 ~/.config/wesee/config.json）
+├── config.py                  # 配置管理（读取服务端 .env 或 config.json）
 ├── models/
 │   ├── __init__.py
 │   ├── events.py              # WebSocket/SSE 事件模型
@@ -142,6 +145,32 @@ def create_llm(config: ServerConfig) -> ChatOpenAI:
         streaming=True,
         temperature=0.7,
     )
+```
+
+### 1.5 服务端配置 (`config.py`)
+
+配置来源优先级：环境变量 > `.env` 文件 > 默认值
+
+```python
+from pydantic_settings import BaseSettings
+
+class ServerConfig(BaseSettings):
+    api_key: str
+    base_url: str = "https://api.deepseek.com"
+    model: str = "deepseek-v4-pro"
+    enable_thinking: bool = True
+    reasoning_effort: str | None = None
+    http_port: int = 8080
+
+    model_config = {"env_prefix": "WESEE_", "env_file": ".env"}
+```
+
+服务端 `.env` 示例：
+```env
+WESEE_API_KEY=sk-xxxxx
+WESEE_BASE_URL=https://api.deepseek.com
+WESEE_MODEL=deepseek-v4-pro
+WESEE_HTTP_PORT=8080
 ```
 
 ### 2. Agent 运行器 (`agent/runner.py`)
@@ -203,8 +232,8 @@ class ClientForwardTool(BaseTool):
 
 macOS 客户端需要：
 
-1. **删除**：`DeepSeekService.swift`、`AgentRunner.swift`、`SystemPromptBuilder.swift`、`ToolRegistry`（AgentTool.swift 中）
-2. **保留**：ShellTool、FileSystemTool、ScreenshotTool（本地执行）
+1. **删除**：`DeepSeekService.swift`、`AgentRunner.swift`、`SystemPromptBuilder.swift`、`ToolRegistry`（AgentTool.swift 中）、`Config.swift` 中 LLM 相关字段（apiKey/baseURL/model/enableThinking/reasoningEffort）
+2. **保留**：ShellTool、FileSystemTool、ScreenshotTool（本地执行），`WorkspaceManager`、`ConfigLoader`（仅保留 workspace 路径、screenshotsPath、httpPort 等非 LLM 配置）
 3. **新增**：`WebSocketClient.swift`（连接服务端 WebSocket）
 4. **精简**：`ChatViewModel.swift`（发送消息改为 WebSocket 调用，接收流式事件）
 5. **保留不变**：所有 SwiftUI Views、Message 模型、WorkspaceManager
@@ -229,7 +258,8 @@ macOS 客户端需要：
 
 ## 安全考虑
 
-- API Key 仅存储在 `~/.config/wesee/config.json`，不硬编码
+- API Key 仅存储在服务端 `.env` 文件中，不提交到版本控制
+- macOS 客户端不持有任何密钥，仅连接 localhost WebSocket
 - Shell 工具：命令白名单 + 禁用管道/重定向/命令替换（与现有客户端逻辑一致）
 - 文件系统工具：路径沙箱限制在工作目录内
 - WebSocket：仅本地连接（localhost）
@@ -237,6 +267,7 @@ macOS 客户端需要：
 
 ## 与现有系统的兼容
 
-- 配置文件格式不变：`~/.config/wesee/config.json`
+- 配置文件迁移到服务端：用 `.env` 或 `config.json` 管理 LLM 配置
+- macOS 客户端不再读取 `~/.config/wesee/config.json` 中的 API Key
 - Web UI 的 `app.js` 可复用，只需修改连接地址
 - macOS 客户端的 Message SwiftData 模型保留，本地存储逻辑不变
