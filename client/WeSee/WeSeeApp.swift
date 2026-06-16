@@ -1,3 +1,4 @@
+// client/WeSee/WeSeeApp.swift
 import SwiftUI
 import SwiftData
 
@@ -6,6 +7,7 @@ struct WeSeeApp: App {
     let container: ModelContainer
     let chatSession: ChatSessionImpl
     let httpServer: HttpServer
+    let wsClient: WebSocketClient
 
     init() {
         do {
@@ -14,16 +16,15 @@ struct WeSeeApp: App {
             fatalError("Failed to create ModelContainer: \(error)")
         }
         let wm = WorkspaceManager()
-        chatSession = ChatSessionImpl(
-            agentRunner: AgentRunner(workspaceManager: wm),
-            workspaceManager: wm,
-            systemPromptBuilder: SystemPromptBuilder(workspaceManager: wm)
-        )
         let config = (try? ConfigLoader.load()) ?? ClientConfig.default
+        wsClient = WebSocketClient()
+        chatSession = ChatSessionImpl(
+            wsClient: wsClient,
+            workspaceManager: wm
+        )
         httpServer = HttpServer(port: config.httpPort, chatSession: chatSession)
         do {
             try httpServer.start()
-            WeSeeLog.info("HttpServer started on port \(config.httpPort)")
         } catch {
             WeSeeLog.error("HttpServer failed to start: \(error.localizedDescription)")
         }
@@ -31,7 +32,10 @@ struct WeSeeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(chatSession: chatSession)
+            ContentView(
+                chatSession: chatSession,
+                wsClient: wsClient
+            )
         }
         .modelContainer(container)
     }

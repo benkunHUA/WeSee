@@ -1,3 +1,4 @@
+// client/WeSee/ContentView.swift
 import SwiftUI
 import SwiftData
 
@@ -6,9 +7,14 @@ struct ContentView: View {
     @State private var chatViewModel: ChatViewModel
     @State private var sidebarViewModel: SidebarViewModel
 
-    init(chatSession: ChatSessionImpl) {
-        _chatViewModel = State(initialValue: ChatViewModel(session: chatSession))
-        _sidebarViewModel = State(initialValue: SidebarViewModel(workspaceManager: chatSession.workspaceManager))
+    init(chatSession: ChatSessionImpl, wsClient: WebSocketClient) {
+        let wm = chatSession.workspaceManager
+        let vm = ChatViewModel(
+            wsClient: wsClient,
+            workspaceManager: wm
+        )
+        _chatViewModel = State(initialValue: vm)
+        _sidebarViewModel = State(initialValue: SidebarViewModel(workspaceManager: wm))
     }
 
     var body: some View {
@@ -22,6 +28,10 @@ struct ContentView: View {
         .onAppear {
             chatViewModel.configure(with: modelContext)
             sidebarViewModel.configure(with: modelContext)
+            chatViewModel.fetchMessages()
+            let config = (try? ConfigLoader.load()) ?? ClientConfig.default
+            let serverURL = URL(string: "ws://localhost:\(config.httpPort)/ws")!
+            Task { await chatViewModel.connect(serverURL: serverURL) }
         }
     }
 }
