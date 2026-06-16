@@ -100,3 +100,51 @@ class TestScreenshotTool:
         result = tool._run()
         # Either succeeds with a file path or returns error message
         assert result  # should have some output
+
+
+import asyncio
+from unittest.mock import MagicMock
+from tools.base import ws_manager_var
+
+
+class TestClientForwardToolAsync:
+    def test_local_fallback_when_no_ws_manager(self):
+        """When no WebSocket manager is set, should execute locally."""
+        tool = ShellTool(workspace_path="/tmp")
+        result = asyncio.run(tool._arun(command="echo local"))
+        assert "local" in result
+
+    def test_forward_when_ws_manager_available(self):
+        """When WebSocket manager has client, should forward."""
+        tool = ShellTool(workspace_path="/tmp")
+        mock_ws = MagicMock()
+        mock_ws.has_client.return_value = True
+        pending: dict[str, tuple] = {}
+
+        def register(call_id, event, container):
+            pending[call_id] = (event, container)
+
+        mock_ws.register_pending_call = register
+        mock_ws.remove_pending_call = lambda cid: pending.pop(cid, None)
+
+        async def mock_send(*args, **kwargs):
+            pass
+        mock_ws.send_event_to_client = mock_send
+
+        async def resolve_later():
+            await asyncio.sleep(0.05)
+            for event, container in pending.values():
+                container["result"] = "remote result"
+                event.set()
+
+        token = ws_manager_var.set(mock_ws)
+        try:
+            async def run():
+                task = asyncio.create_task(tool._arun(command="ls"))
+                await resolve_later()
+                return await task
+
+            result = asyncio.run(run())
+            assert result == "remote result"
+        finally:
+            ws_manager_var.reset(token)
