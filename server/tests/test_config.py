@@ -1,6 +1,7 @@
 # server/tests/test_config.py
 import os
 import pytest
+from pydantic import ValidationError
 from config import ServerConfig
 
 
@@ -30,5 +31,36 @@ def test_config_from_env(monkeypatch):
 
 def test_config_missing_api_key():
     """Should raise validation error when api_key is missing."""
-    with pytest.raises(ValueError):
-        ServerConfig(api_key="")  # empty after init
+    with pytest.raises(ValidationError):
+        ServerConfig(api_key="")
+
+
+def test_config_whitespace_api_key():
+    """Should reject whitespace-only api_key."""
+    with pytest.raises(ValidationError):
+        ServerConfig(api_key="   ")
+
+
+def test_config_valid_reasoning_effort():
+    """Should accept valid reasoning_effort values."""
+    for value in ("low", "medium", "high"):
+        config = ServerConfig(api_key="test-key", reasoning_effort=value)
+        assert config.reasoning_effort == value
+
+
+def test_config_invalid_reasoning_effort():
+    """Should reject invalid reasoning_effort values."""
+    with pytest.raises(ValidationError):
+        ServerConfig(api_key="test-key", reasoning_effort="invalid")
+
+
+def test_config_invalid_http_port_too_low():
+    """Should reject http_port below 1."""
+    with pytest.raises(ValidationError):
+        ServerConfig(api_key="test-key", http_port=0)
+
+
+def test_config_invalid_http_port_too_high():
+    """Should reject http_port above 65535."""
+    with pytest.raises(ValidationError):
+        ServerConfig(api_key="test-key", http_port=65536)
