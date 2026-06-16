@@ -29,15 +29,13 @@ class TestAgentRunnerRun:
 
         with patch.object(agent_runner, "_create_agent") as mock_create_agent:
             mock_agent = MagicMock()
-            mock_agent.astream_events = MagicMock()
-
             async def mock_stream(*args, **kwargs):
                 yield {
                     "event": "on_chat_model_stream",
                     "data": {"chunk": mock_chunk},
                 }
 
-            mock_agent.astream_events.side_effect = mock_stream
+            mock_agent.astream_events = mock_stream
             mock_create_agent.return_value = mock_agent
 
             events = []
