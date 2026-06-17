@@ -1,7 +1,14 @@
 # server/tools/filesystem.py
 import os
 from typing import Any
+from pydantic import BaseModel, Field
 from tools.base import ClientForwardTool
+
+
+class FileSystemInput(BaseModel):
+    action: str = Field(description="One of: read_file, write_file, list_directory")
+    path: str = Field(description="Path relative to the workspace directory")
+    content: str = Field(default="", description="File content to write (required for write_file)")
 
 
 class FileSystemTool(ClientForwardTool):
@@ -12,13 +19,10 @@ class FileSystemTool(ClientForwardTool):
         "files, and list_directory to list directory contents. "
         "All paths are relative to the workspace root."
     )
+    args_schema: type[BaseModel] = FileSystemInput
     max_file_size: int = 1_000_000
 
-    def _run_local(self, **kwargs: Any) -> str:
-        action = kwargs.get("action", "")
-        path = kwargs.get("path", "")
-        content = kwargs.get("content", "")
-
+    def _run_local(self, action: str = "", path: str = "", content: str = "", **kwargs: Any) -> str:
         if not action or not path:
             return "Error: missing required parameters 'action' or 'path'"
 

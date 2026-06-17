@@ -3,7 +3,12 @@ import subprocess
 import os
 import time
 from typing import Any
+from pydantic import BaseModel, Field
 from tools.base import ClientForwardTool
+
+
+class ScreenshotInput(BaseModel):
+    type: str = Field(default="fullscreen", description="Screenshot type: 'fullscreen' (default), 'window', or 'selection'")
 
 
 class ScreenshotTool(ClientForwardTool):
@@ -12,9 +17,10 @@ class ScreenshotTool(ClientForwardTool):
         "Take a screenshot on macOS. Supports fullscreen, window selection, "
         "or interactive area selection. Screenshots are saved as PNG files."
     )
+    args_schema: type[BaseModel] = ScreenshotInput
 
-    def _run_local(self, **kwargs: Any) -> str:
-        screenshot_type = kwargs.get("type", "fullscreen")
+    def _run_local(self, type: str = "fullscreen", **kwargs: Any) -> str:
+        screenshot_type = type
         screenshot_dir = os.path.join(self.workspace_path, "screenshots")
         os.makedirs(screenshot_dir, exist_ok=True)
 

@@ -35,14 +35,14 @@ final class ChatSessionImpl: ChatSessionProtocol {
 
     func newConversation() {
         messages = []
-        Task { await wsClient.send(ClientMessage(type: .newConversation)) }
+        wsClient.send(ClientMessage(type: .newConversation))
     }
 
     func send(_ text: String, onEvent: @escaping (SessionEvent) -> Void) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= 5000 else { return }
         addMessage(content: trimmed, isFromMe: true)
-        await wsClient.send(ClientMessage(type: .chat, content: trimmed))
+        wsClient.send(ClientMessage(type: .chat, content: trimmed))
     }
 
     func clearError() {}

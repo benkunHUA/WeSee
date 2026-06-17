@@ -105,17 +105,23 @@ function handleSSEEvent(event) {
         const div = document.createElement('div');
         div.className = 'tool-call';
         div.id = 'tool-' + event.id;
-        div.innerHTML = '<span class="name">🔧 ' + event.name + '</span><div class="result">Running...</div>';
+        div.innerHTML = '<span class="name">\u{1F527} ' + event.name + '</span><div class="result">Running...</div>';
         toolsEl.appendChild(div);
         scrollToBottom();
       }
       break;
     case 'toolResult':
-      if (pendingToolCalls[event.id]) pendingToolCalls[event.id].result = event.result;
+      if (pendingToolCalls[event.id]) pendingToolCalls[event.id].result = event.data;
       const toolDiv = document.getElementById('tool-' + event.id);
       if (toolDiv) {
-        const truncated = event.result.length > 500 ? event.result.slice(0, 500) + '...' : event.result;
-        toolDiv.querySelector('.result').textContent = truncated;
+        const resultDiv = toolDiv.querySelector('.result');
+        if (isScreenshotPath(event.data, event.name)) {
+          const filename = event.data.split('/').pop();
+          resultDiv.innerHTML = '<img src="/api/files/screenshots/' + filename + '" class="screenshot" loading="lazy" onclick="this.classList.toggle(\'expanded\')">';
+        } else {
+          const truncated = event.data.length > 500 ? event.data.slice(0, 500) + '...' : event.data;
+          resultDiv.textContent = truncated;
+        }
       }
       break;
     case 'done':
@@ -126,6 +132,10 @@ function handleSSEEvent(event) {
       resetInput();
       break;
   }
+}
+
+function isScreenshotPath(data, toolName) {
+  return toolName === 'screenshot' && data && data.endsWith('.png');
 }
 
 function createStreamingBubble() {
@@ -139,6 +149,7 @@ function createStreamingBubble() {
 function finalizeStream() {
   if (currentStreamingEl) {
     currentStreamingEl.classList.remove('streaming');
+    embedScreenshotImages(currentStreamingEl);
     currentStreamingEl = null;
   }
   resetInput();
@@ -155,9 +166,27 @@ function renderMessage(content, isFromMe, thinkingContent) {
     div.appendChild(think);
   }
   const contentSpan = document.createElement('span');
+  contentSpan.className = 'content';
   contentSpan.textContent = content;
   div.appendChild(contentSpan);
+  embedScreenshotImages(div);
   messagesEl.appendChild(div);
+}
+
+function embedScreenshotImages(container) {
+  const pattern = /(\/[\w\/.-]*screenshots\/([\w.-]+\.png))/gi;
+
+  container.querySelectorAll('.content, .result').forEach(function(el) {
+    const text = el.textContent || '';
+    if (!pattern.test(text)) return;
+    pattern.lastIndex = 0;
+
+    let html = el.innerHTML;
+    html = html.replace(pattern, function(match, fullPath, filename) {
+      return fullPath + '<br><img src="/api/files/screenshots/' + filename + '" class="screenshot-inline" loading="lazy" onclick="this.classList.toggle(\'expanded\')">';
+    });
+    el.innerHTML = html;
+  });
 }
 
 function newConversation() {

@@ -17,7 +17,7 @@ final class ChatSessionTests: XCTestCase {
     }
 
     func testNewConversation_clearsMessages() async {
-        await session.send("hello")
+        await session.send("hello") { _ in }
         session.newConversation()
         XCTAssertTrue(session.messages.isEmpty)
         XCTAssertEqual(session.streamingContent, "")
@@ -25,26 +25,26 @@ final class ChatSessionTests: XCTestCase {
     }
 
     func testSend_emptyMessage_doesNotSend() async {
-        await session.send("   ")
+        await session.send("   ") { _ in }
         XCTAssertFalse(mockRunner.runCalled)
     }
 
     func testSend_longMessage_trimsTo5000() async {
         let long = String(repeating: "a", count: 5001)
-        await session.send(long)
+        await session.send(long) { _ in }
         XCTAssertFalse(mockRunner.runCalled)
     }
 
     func testSend_normalMessage_callsAgentRunner() async {
         mockRunner.events = [.token("Hi"), .done]
-        await session.send("hello")
+        await session.send("hello") { _ in }
         XCTAssertTrue(mockRunner.runCalled)
         XCTAssertEqual(session.messages.last?.content, "Hi")
     }
 
     func testSend_streamingContent_updatesDuringStream() async {
         mockRunner.events = [.token("Hello"), .token(" World"), .done]
-        await session.send("hi")
+        await session.send("hi") { _ in }
         XCTAssertEqual(session.messages.last?.content, "Hello World")
         XCTAssertFalse(session.isStreaming)
     }
@@ -56,13 +56,13 @@ final class ChatSessionTests: XCTestCase {
             .token("Done"),
             .done,
         ]
-        await session.send("list files")
+        await session.send("list files") { _ in }
         XCTAssertEqual(session.toolCallResults.count, 0)
     }
 
     func testSend_error_setsErrorState() async {
         mockRunner.events = [.error("Network down")]
-        await session.send("test")
+        await session.send("test") { _ in }
         XCTAssertEqual(session.streamingContent, "")
         XCTAssertFalse(session.isStreaming)
     }

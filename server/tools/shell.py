@@ -1,6 +1,7 @@
 # server/tools/shell.py
 import subprocess
 from typing import Any
+from pydantic import BaseModel, Field
 from tools.base import ClientForwardTool
 
 
@@ -25,6 +26,10 @@ DANGEROUS_PATTERNS = [
 ]
 
 
+class ShellInput(BaseModel):
+    command: str = Field(description="The shell command to execute")
+
+
 class ShellTool(ClientForwardTool):
     name: str = "shell"
     description: str = (
@@ -32,10 +37,10 @@ class ShellTool(ClientForwardTool):
         "No pipes, redirects, or command substitution. Commands have a "
         "30-second timeout."
     )
+    args_schema: type[BaseModel] = ShellInput
     timeout_seconds: int = 30
 
-    def _run_local(self, **kwargs: Any) -> str:
-        command = kwargs.get("command", "")
+    def _run_local(self, command: str = "", **kwargs: Any) -> str:
         if not command:
             return "Error: missing required parameter 'command'"
 

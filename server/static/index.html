@@ -31,7 +31,11 @@
   .thinking-block.visible { display: block; }
   .tool-call { font-size: 0.8em; background: #1e3a2f; padding: 8px; border-radius: 8px; margin: 4px 0; }
   .tool-call .name { color: #4ec9b0; font-weight: 600; }
-  .tool-call .result { color: #888; font-size: 0.9em; margin-top: 4px; max-height: 120px; overflow-y: auto; }
+  .tool-call .result { color: #888; font-size: 0.9em; margin-top: 4px; max-height: 200px; overflow-y: auto; }
+  .screenshot { max-width: 100%; max-height: 200px; border-radius: 8px; cursor: pointer; margin-top: 4px; transition: max-height 0.3s; }
+  .screenshot.expanded { max-height: 600px; }
+  .screenshot-inline { display: block; max-width: 100%; max-height: 200px; border-radius: 8px; cursor: pointer; margin: 8px 0; transition: max-height 0.3s; }
+  .screenshot-inline.expanded { max-height: 600px; }
   #input-area {
     display: flex;
     padding: 12px;

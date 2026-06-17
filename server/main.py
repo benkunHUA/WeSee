@@ -1,4 +1,5 @@
 # server/main.py
+import logging
 from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
 from config import ServerConfig
@@ -9,6 +10,12 @@ from agent.runner import AgentRunner
 from session.manager import SessionManager
 from handlers.websocket import WebSocketManager
 from handlers.api import create_api_router
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 
 def create_app(config: ServerConfig | None = None) -> FastAPI:

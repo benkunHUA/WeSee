@@ -67,15 +67,9 @@ final class MockChatSession: ChatSessionProtocol {
     var streamingContent: String = ""
     var thinkingContent: String = ""
     var isStreaming: Bool = false
-    var toolCallResults: [(id: String, name: String, arguments: [String: Any], result: String?)] = []
-    private var _eventContinuation: AsyncStream<SessionEvent>.Continuation?
-    lazy var eventStream: AsyncStream<SessionEvent> = {
-        AsyncStream { continuation in
-            self._eventContinuation = continuation
-        }
-    }()
+    var toolCallResults: [(id: String, name: String, arguments: [String: JSONValue], result: String?)] = []
 
-    func send(_ text: String) async {}
+    func send(_ text: String, onEvent: @escaping (SessionEvent) -> Void) async {}
     func newConversation() {}
     func configure(with modelContext: ModelContext) {}
     func fetchMessages() {}

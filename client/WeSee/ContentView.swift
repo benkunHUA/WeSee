@@ -31,7 +31,7 @@ struct ContentView: View {
             chatViewModel.fetchMessages()
             let config = (try? ConfigLoader.load()) ?? ClientConfig.default
             let serverURL = URL(string: "ws://localhost:\(config.httpPort)/ws")!
-            Task { await chatViewModel.connect(serverURL: serverURL) }
+            chatViewModel.connect(serverURL: serverURL)
         }
     }
 }

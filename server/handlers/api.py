@@ -1,7 +1,8 @@
 # server/handlers/api.py
 import json
+import os
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from sse_starlette.sse import EventSourceResponse
 from session.manager import SessionManager
 from agent.runner import AgentRunner
@@ -30,7 +31,7 @@ def create_api_router(
         async def event_generator():
             try:
                 async for event in agent_runner.run(
-                    history=list(web_session.messages[:-1]),
+                    history=list(web_session.messages),
                     workspace_path=web_session.workspace_path,
                 ):
                     data = json.dumps(
@@ -66,5 +67,15 @@ def create_api_router(
     async def new_conversation():
         web_session.clear()
         return JSONResponse({"ok": True})
+
+    @router.get("/api/files/screenshots/{filename}")
+    async def serve_screenshot(filename: str):
+        screenshots_dir = os.path.join(web_session.workspace_path, "screenshots")
+        safe_path = os.path.realpath(os.path.join(screenshots_dir, filename))
+        if not safe_path.startswith(os.path.realpath(screenshots_dir) + os.sep):
+            raise HTTPException(status_code=403, detail="Forbidden")
+        if not os.path.isfile(safe_path):
+            raise HTTPException(status_code=404, detail="Not found")
+        return FileResponse(safe_path)
 
     return router

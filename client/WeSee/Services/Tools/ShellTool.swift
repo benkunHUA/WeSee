@@ -102,22 +102,26 @@ final class ShellTool: AgentTool {
         process.standardError = stderrPipe
 
         return try await withCheckedThrowingContinuation { continuation in
-            let stdoutData = NSMutableData()
-            let stderrData = NSMutableData()
+            let stdoutLock = NSLock()
+            let stderrLock = NSLock()
+            var stdoutData = Data()
+            var stderrData = Data()
 
             stdoutPipe.fileHandleForReading.readabilityHandler = { handle in
-                stdoutData.append(handle.availableData)
+                let chunk = handle.availableData
+                stdoutLock.withLock { stdoutData.append(chunk) }
             }
             stderrPipe.fileHandleForReading.readabilityHandler = { handle in
-                stderrData.append(handle.availableData)
+                let chunk = handle.availableData
+                stderrLock.withLock { stderrData.append(chunk) }
             }
 
             process.terminationHandler = { proc in
                 stdoutPipe.fileHandleForReading.readabilityHandler = nil
                 stderrPipe.fileHandleForReading.readabilityHandler = nil
 
-                let out = String(data: stdoutData as Data, encoding: .utf8) ?? ""
-                let err = String(data: stderrData as Data, encoding: .utf8) ?? ""
+                let out = stdoutLock.withLock { String(data: stdoutData, encoding: .utf8) ?? "" }
+                let err = stderrLock.withLock { String(data: stderrData, encoding: .utf8) ?? "" }
                 var result = ""
                 if !out.isEmpty { result += out }
                 if !err.isEmpty { result += (result.isEmpty ? "" : "\n") + err }
