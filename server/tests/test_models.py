@@ -116,3 +116,19 @@ class TestMessage:
         assert d["role"] == "assistant"
         assert d["content"] is None
         assert len(d["tool_calls"]) == 1
+
+
+def test_client_message_accepts_session_id():
+    msg = ClientMessage(type="chat", content="hello", session_id="session-1")
+    data = json.loads(msg.model_dump_json())
+    assert data == {
+        "type": "chat",
+        "content": "hello",
+        "session_id": "session-1",
+    }
+
+
+def test_server_event_accepts_session_id():
+    event = ServerEvent(type="session", session_id="session-1")
+    data = json.loads(event.model_dump_json())
+    assert data == {"type": "session", "session_id": "session-1"}
