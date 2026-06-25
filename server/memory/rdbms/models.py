@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timezone
 from typing import Any
 
+import sqlalchemy as sa
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
@@ -70,8 +71,8 @@ class SessionRow(Base):
             "status in ('active', 'archived')",
             name="ck_sessions_status",
         ),
-        Index("ix_sessions_user_id_updated_at", "user_id", "updated_at"),
-        Index("ix_sessions_status_updated_at", "status", "updated_at"),
+        Index("ix_sessions_user_id_updated_at", "user_id", sa.text("updated_at DESC")),
+        Index("ix_sessions_status_updated_at", "status", sa.text("updated_at DESC")),
     )
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
@@ -117,7 +118,6 @@ class MessageRow(Base):
             name="ck_messages_role",
         ),
         UniqueConstraint("session_id", "sequence", name="uq_messages_session_sequence"),
-        Index("ix_messages_session_id_sequence", "session_id", "sequence"),
         Index("ix_messages_session_id_id", "session_id", "id"),
     )
 
