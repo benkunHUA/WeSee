@@ -64,3 +64,17 @@ def test_config_invalid_http_port_too_high():
     """Should reject http_port above 65535."""
     with pytest.raises(ValidationError):
         ServerConfig(api_key="test-key", http_port=65536)
+
+
+def test_memory_defaults_present():
+    cfg = ServerConfig(api_key="sk-test")
+    assert cfg.postgres_dsn.startswith("postgresql+asyncpg://")
+    assert cfg.milvus_lite_path.endswith(".db")
+    assert cfg.embedding_model == "doubao-embedding-vision"
+    assert cfg.ark_base_url.startswith("https://ark.cn-beijing.volces.com")
+    assert cfg.memory_write_async is True
+
+
+def test_ark_api_key_optional():
+    cfg = ServerConfig(api_key="sk-test")
+    assert cfg.ark_api_key == ""
