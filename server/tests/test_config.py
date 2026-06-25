@@ -78,3 +78,11 @@ def test_memory_defaults_present():
 def test_ark_api_key_optional():
     cfg = ServerConfig(api_key="sk-test")
     assert cfg.ark_api_key == ""
+
+def test_postgres_dsn_can_be_overridden(monkeypatch):
+    monkeypatch.setenv(
+        "WESEE_POSTGRES_DSN",
+        "postgresql+asyncpg://user:pass@localhost:5432/custom",
+    )
+    cfg = ServerConfig(api_key="sk-test")
+    assert cfg.postgres_dsn == "postgresql+asyncpg://user:pass@localhost:5432/custom"
