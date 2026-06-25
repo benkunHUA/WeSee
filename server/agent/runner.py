@@ -1,7 +1,7 @@
 # server/agent/runner.py
 import logging
 from typing import AsyncIterator, Any
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 from langchain_core.tools import BaseTool
 from config import ServerConfig
 from agent.llm import create_llm
@@ -30,8 +30,8 @@ class AgentRunner:
                 self.config.base_url,
             )
             llm = create_llm(self.config)
-            agent = self._create_agent(llm)
-            messages = self._build_messages(history, workspace_path)
+            agent = self._create_agent(llm, build_system_prompt(workspace_path))
+            messages = self._build_messages(history)
             logger.info("Starting agent stream, history_len=%d", len(history))
 
             async for stream_event in agent.astream_events(
@@ -90,15 +90,13 @@ class AgentRunner:
             logger.error("Agent error: %s", e, exc_info=True)
             yield ServerEvent(type="error", data=str(e))
 
-    def _create_agent(self, llm: Any) -> Any:
-        return create_react_agent(llm, self.tools)
+    def _create_agent(self, llm: Any, system_prompt: str) -> Any:
+        return create_agent(llm, self.tools, system_prompt=system_prompt)
 
     def _build_messages(
-        self, history: list[Message], workspace_path: str
+        self, history: list[Message]
     ) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = []
-        prompt = build_system_prompt(workspace_path)
-        result.append({"role": "system", "content": prompt})
         for msg in history:
             result.append(msg.to_dict())
         return result
