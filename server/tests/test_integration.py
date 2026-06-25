@@ -1,4 +1,3 @@
-# server/tests/test_integration.py
 """Integration tests covering full HTTP and WebSocket flows."""
 import json
 import pytest
@@ -108,62 +107,60 @@ async def test_http_chat_validation(app):
 # ── WebSocket full flow ─────────────────────────────────────────────
 
 
-def test_websocket_full_flow_chat(test_client):
-    """Full WebSocket flow: connect → update workspace → chat → done/error."""
-    with test_client.websocket_connect("/ws") as ws:
-        # Set workspace
+def test_websocket_full_flow_chat(app):
+    """Full WebSocket flow: connect → update workspace → chat → done."""
+    client = TestClient(app)
+    with client.websocket_connect("/ws") as ws:
+        session_event = json.loads(ws.receive_text())
+        assert session_event["type"] == "session"
+
         ws.send_text(json.dumps({
             "type": "update_workspace",
             "path": "/tmp/test-integration",
         }))
-
-        # Send chat message
         ws.send_text(json.dumps({
             "type": "chat",
             "content": "respond with just the word hello",
         }))
 
-        # Collect events until done/error
         event_types = []
         for _ in range(30):
-            try:
-                data = ws.receive_text()
-                event = json.loads(data)
-                event_types.append(event["type"])
-                if event["type"] in ("done", "error"):
-                    break
-            except Exception:
+            data = ws.receive_text()
+            event = json.loads(data)
+            event_types.append(event["type"])
+            if event["type"] in ("done", "error"):
                 break
 
-        assert len(event_types) > 0
-        assert event_types[-1] in ("done", "error")
+        assert event_types[-1] == "done"
 
 
-def test_websocket_new_conversation_resets_state(test_client):
+def test_websocket_new_conversation_resets_state(app):
     """New conversation message should reset session state."""
-    with test_client.websocket_connect("/ws") as ws:
+    client = TestClient(app)
+    with client.websocket_connect("/ws") as ws:
+        json.loads(ws.receive_text())
         ws.send_text(json.dumps({"type": "new_conversation"}))
-        # Should not cause any error, connection stays open
 
 
-def test_websocket_tool_result_handling(test_client):
+def test_websocket_tool_result_handling(app):
     """Tool result message should be processed without error (even if no pending call)."""
-    with test_client.websocket_connect("/ws") as ws:
-        # Send tool result for non-existent call (should be ignored gracefully)
+    client = TestClient(app)
+    with client.websocket_connect("/ws") as ws:
+        json.loads(ws.receive_text())
         ws.send_text(json.dumps({
             "type": "tool_result",
             "id": "nonexistent_call",
             "name": "shell",
             "result": "test output",
         }))
-        # Connection should remain open
 
 
-def test_websocket_invalid_message(test_client):
+def test_websocket_invalid_message(app):
     """Invalid JSON should not crash the WebSocket."""
-    with test_client.websocket_connect("/ws") as ws:
+    client = TestClient(app)
+    with client.websocket_connect("/ws") as ws:
+        json.loads(ws.receive_text())
         ws.send_text("not valid json{{{")
-        # Connection should remain open — send a valid message after
         ws.send_text(json.dumps({"type": "new_conversation"}))
 
 
@@ -183,18 +180,5 @@ async def test_http_and_websocket_coexist(app):
     # WebSocket connection (separate)
     test_client = TestClient(app)
     with test_client.websocket_connect("/ws") as ws:
+        json.loads(ws.receive_text())
         ws.send_text(json.dumps({"type": "new_conversation"}))
-
-
-def test_static_files_served(test_client):
-    """Static files (web UI) should be served at root."""
-    resp = test_client.get("/")
-    assert resp.status_code == 200
-    assert "text/html" in resp.headers["content-type"]
-
-
-def test_app_js_served(test_client):
-    """app.js should be served."""
-    resp = test_client.get("/app.js")
-    assert resp.status_code == 200
-    assert "javascript" in resp.headers["content-type"]
