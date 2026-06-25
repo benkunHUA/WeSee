@@ -46,3 +46,23 @@ class TestSessionManager:
         session = manager.create_session()
         manager.remove_session(session.id)
         assert manager.get_session(session.id) is None
+
+
+def test_session_can_be_created_from_persisted_values():
+    from models.message import Message
+    messages = [Message(role="user", content="hello")]
+    session = Session(
+        session_id="session-1",
+        workspace_path="/tmp/project",
+        messages=messages,
+    )
+    assert session.id == "session-1"
+    assert session.workspace_path == "/tmp/project"
+    assert session.messages == messages
+
+
+def test_manager_set_session_registers_existing_session():
+    manager = SessionManager()
+    session = Session(session_id="session-1")
+    manager.set_session(session)
+    assert manager.get_session("session-1") is session
