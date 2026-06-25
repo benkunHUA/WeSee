@@ -182,3 +182,12 @@ async def test_http_and_websocket_coexist(app):
     with test_client.websocket_connect("/ws") as ws:
         json.loads(ws.receive_text())
         ws.send_text(json.dumps({"type": "new_conversation"}))
+
+
+@pytest.mark.asyncio
+async def test_app_uses_injected_conversation_store(app):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/messages")
+        assert response.status_code == 200
+        assert response.json() == {"messages": []}

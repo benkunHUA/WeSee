@@ -45,6 +45,10 @@ def create_app(
         async def dispose_database_engine():
             await engine.dispose()
 
+    @app.on_event("startup")
+    async def ensure_database_ready():
+        await conversation_store.ensure_default_user()
+
     session_manager = SessionManager()
     ws_manager = WebSocketManager()
 
