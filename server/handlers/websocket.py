@@ -7,6 +7,7 @@ from models.events import ClientMessage, ServerEvent
 from session.manager import SessionManager, Session
 from agent.runner import AgentRunner
 from conversations.store import ConversationStore
+from memory.rdbms.models import SessionRow
 from models.message import Message
 from tools.base import ws_manager_var
 
@@ -58,6 +59,12 @@ class WebSocketManager:
         await ws.accept()
         self._client_ws = ws
         await conversation_store.ensure_default_user()
+        token = ws_manager_var.set(self)
+        agent_task: asyncio.Task | None = None
+        running = True
+
+        # Always create a new session on connect; the first client
+        # message may override this with a session_id for resume.
         stored_session = await conversation_store.create_session(workspace_path="/tmp")
         session = session_manager.create_session(
             session_id=stored_session.id,
@@ -66,9 +73,24 @@ class WebSocketManager:
         )
         await self._send_raw(ServerEvent(type="session", session_id=session.id))
         logger.info("Client connected, session=%s", session.id[:8])
-        token = ws_manager_var.set(self)
-        agent_task: asyncio.Task | None = None
-        running = True
+
+        async def _resume_session(desired_session_id: str) -> Session:
+            stored = await conversation_store.get_session(desired_session_id)
+            if stored is None:
+                await self._send_raw(
+                    ServerEvent(type="error", data="Invalid session_id")
+                )
+                raise ValueError("Invalid session_id")
+            loaded_messages = await conversation_store.load_messages(stored.id)
+            session_manager.remove_session(session.id)
+            new_session = session_manager.create_session(
+                session_id=stored.id,
+                workspace_path=stored.workspace_path,
+                messages=loaded_messages,
+            )
+            await self._send_raw(ServerEvent(type="session", session_id=new_session.id))
+            logger.info("Resumed session=%s", new_session.id[:8])
+            return new_session
 
         async def run_agent(content: str):
             logger.info("Agent task started, content='%s'", content[:80])
@@ -138,6 +160,13 @@ class WebSocketManager:
                     continue
 
                 logger.info("Message: type=%s", msg.type)
+
+                # Resume persisted session when client provides session_id
+                if msg.session_id and msg.session_id != session.id:
+                    try:
+                        session = await _resume_session(msg.session_id)
+                    except ValueError:
+                        continue
 
                 if msg.type == "chat":
                     if not msg.content:

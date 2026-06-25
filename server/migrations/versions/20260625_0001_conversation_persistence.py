@@ -70,17 +70,11 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["session_id"], ["sessions.id"]),
         sa.UniqueConstraint("session_id", "sequence", name="uq_messages_session_sequence"),
     )
-    op.create_index(
-        "ix_messages_session_id_sequence",
-        "messages",
-        ["session_id", "sequence"],
-    )
     op.create_index("ix_messages_session_id_id", "messages", ["session_id", "id"])
 
 
 def downgrade() -> None:
     op.drop_index("ix_messages_session_id_id", table_name="messages")
-    op.drop_index("ix_messages_session_id_sequence", table_name="messages")
     op.drop_table("messages")
     op.drop_index("ix_sessions_status_updated_at", table_name="sessions")
     op.drop_index("ix_sessions_user_id_updated_at", table_name="sessions")
