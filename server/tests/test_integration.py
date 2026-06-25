@@ -4,19 +4,6 @@ import json
 import pytest
 from httpx import AsyncClient, ASGITransport
 from fastapi.testclient import TestClient
-from main import create_app
-from config import ServerConfig
-
-
-@pytest.fixture
-def app():
-    config = ServerConfig(api_key="sk-test")
-    return create_app(config)
-
-
-@pytest.fixture
-def test_client(app):
-    return TestClient(app)
 
 
 # ── HTTP full flow ──────────────────────────────────────────────────
@@ -77,26 +64,24 @@ async def test_http_multiple_messages(app):
 
 
 @pytest.mark.asyncio
-async def test_http_new_conversation_clears_messages(app):
-    """New conversation should clear the message history."""
+async def test_http_new_conversation_creates_empty_new_session(app):
+    """New conversation creates a new session and preserves old history."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        # Send a message
         async with client.stream(
             "POST", "/api/chat", json={"content": "hi"}
         ) as resp:
             async for _ in resp.aiter_text():
                 pass
 
-        # Verify messages exist
         resp = await client.get("/api/messages")
         before = len(resp.json()["messages"])
-        assert before > 0
+        assert before == 2
 
-        # Start new conversation
-        await client.post("/api/new-conversation")
+        new_resp = await client.post("/api/new-conversation")
+        assert new_resp.status_code == 200
+        assert new_resp.json()["session_id"]
 
-        # Verify messages cleared
         resp = await client.get("/api/messages")
         after = len(resp.json()["messages"])
         assert after == 0

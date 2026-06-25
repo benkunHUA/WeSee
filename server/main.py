@@ -10,6 +10,8 @@ from agent.runner import AgentRunner
 from session.manager import SessionManager
 from handlers.websocket import WebSocketManager
 from handlers.api import create_api_router
+from conversations.store import ConversationStore
+from memory.rdbms.base import make_engine, make_session_factory
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -18,7 +20,12 @@ logging.basicConfig(
 )
 
 
-def create_app(config: ServerConfig | None = None) -> FastAPI:
+def create_app(
+    config: ServerConfig | None = None,
+    *,
+    conversation_store: ConversationStore | None = None,
+    agent_runner: AgentRunner | None = None,
+) -> FastAPI:
     if config is None:
         config = ServerConfig(api_key="sk-test")
 
@@ -29,18 +36,35 @@ def create_app(config: ServerConfig | None = None) -> FastAPI:
         FileSystemTool(workspace_path="/tmp"),
         ScreenshotTool(workspace_path="/tmp"),
     ]
-    agent_runner = AgentRunner(config=config, tools=tools)
+    resolved_agent_runner = agent_runner or AgentRunner(config=config, tools=tools)
+    if conversation_store is None:
+        engine = make_engine(config.postgres_dsn)
+        conversation_store = ConversationStore(make_session_factory(engine))
+
+        @app.on_event("shutdown")
+        async def dispose_database_engine():
+            await engine.dispose()
+
     session_manager = SessionManager()
     ws_manager = WebSocketManager()
 
     # API routes
-    api_router = create_api_router(session_manager, agent_runner)
+    api_router = create_api_router(
+        session_manager,
+        resolved_agent_runner,
+        conversation_store,
+    )
     app.include_router(api_router)
 
     # WebSocket endpoint
     @app.websocket("/ws")
     async def websocket_endpoint(ws: WebSocket):
-        await ws_manager.handle_client(ws, session_manager, agent_runner)
+        await ws_manager.handle_client(
+            ws,
+            session_manager,
+            resolved_agent_runner,
+            conversation_store,
+        )
 
     # Static files
     try:

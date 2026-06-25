@@ -6,6 +6,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from models.events import ClientMessage, ServerEvent
 from session.manager import SessionManager, Session
 from agent.runner import AgentRunner
+from conversations.store import ConversationStore
 from tools.base import ws_manager_var
 
 logger = logging.getLogger("wesee.ws")
@@ -51,6 +52,7 @@ class WebSocketManager:
         ws: WebSocket,
         session_manager: SessionManager,
         agent_runner: AgentRunner,
+        conversation_store: ConversationStore | None = None,
     ):
         await ws.accept()
         self._client_ws = ws
