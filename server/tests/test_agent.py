@@ -1,11 +1,9 @@
 # server/tests/test_agent.py
-import asyncio
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 from agent.runner import AgentRunner
 from config import ServerConfig
 from models.message import Message
-from models.events import ServerEvent
 
 
 @pytest.fixture
@@ -45,6 +43,10 @@ class TestAgentRunnerRun:
             ):
                 events.append(event)
 
+            mock_create_agent.assert_called_once()
+            _, system_prompt = mock_create_agent.call_args.args
+            assert "/tmp" in system_prompt
+
             tokens = [e for e in events if e.type == "token"]
             assert len(tokens) == 1
             assert tokens[0].data == "Hello, world!"
@@ -57,15 +59,13 @@ class TestAgentRunnerBuildMessages:
             Message(role="user", content="hello"),
             Message(role="assistant", content="hi there"),
         ]
-        messages = runner._build_messages(history, "/tmp")
-        assert len(messages) == 3  # system + user + assistant
-        assert messages[0]["role"] == "system"
-        assert messages[1]["role"] == "user"
-        assert messages[2]["role"] == "assistant"
-        assert "/tmp" in messages[0]["content"]
+        messages = runner._build_messages(history)
+        assert messages == [
+            {"role": "user", "content": "hello"},
+            {"role": "assistant", "content": "hi there"},
+        ]
 
     def test_build_messages_empty_history(self, test_config):
         runner = AgentRunner(config=test_config, tools=[])
-        messages = runner._build_messages([], "/tmp")
-        assert len(messages) == 1  # only system prompt
-        assert messages[0]["role"] == "system"
+        messages = runner._build_messages([])
+        assert messages == []
