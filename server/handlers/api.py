@@ -65,6 +65,7 @@ def create_api_router(
                 async for event in agent_runner.run(
                     history=list(web_session.messages),
                     workspace_path=web_session.workspace_path,
+                    user_query=content,
                 ):
                     if event.type == "token" and event.data:
                         assistant_content = f"{assistant_content}{event.data}"

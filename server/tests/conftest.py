@@ -9,7 +9,7 @@ from models.events import ServerEvent
 
 
 class FakeAgentRunner:
-    async def run(self, history, workspace_path, stream_tool_events=True):
+    async def run(self, history, workspace_path, stream_tool_events=True, user_query=""):
         yield ServerEvent(type="token", data="fake response")
         yield ServerEvent(type="done")
 

@@ -3,10 +3,13 @@ import logging
 from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
 from config import ServerConfig
+from tools.index import ToolIndex
 from tools.shell import ShellTool
 from tools.filesystem import FileSystemTool
 from tools.screenshot import ScreenshotTool
 from agent.runner import AgentRunner
+from memory.config import MemoryConfig
+from memory.embeddings import DoubaoEmbedder
 from session.manager import SessionManager
 from handlers.websocket import WebSocketManager
 from handlers.api import create_api_router
@@ -36,7 +39,19 @@ def create_app(
         FileSystemTool(workspace_path="/tmp"),
         ScreenshotTool(workspace_path="/tmp"),
     ]
-    resolved_agent_runner = agent_runner or AgentRunner(config=config, tools=tools)
+    # Tool RAG index setup
+    tool_index = ToolIndex(
+        embedder=DoubaoEmbedder(MemoryConfig.from_server_config(config)),
+        milvus_path=config.milvus_lite_path,
+    )
+
+    whitelist = {"shell", "file_system"}
+    resolved_agent_runner = agent_runner or AgentRunner(
+        config=config,
+        tools=tools,
+        tool_index=tool_index,
+        whitelist=whitelist,
+    )
     if conversation_store is None:
         engine = make_engine(config.postgres_dsn)
         conversation_store = ConversationStore(make_session_factory(engine))
@@ -46,8 +61,9 @@ def create_app(
             await engine.dispose()
 
     @app.on_event("startup")
-    async def ensure_database_ready():
+    async def on_startup():
         await conversation_store.ensure_default_user()
+        await tool_index.build_index(tools)
 
     session_manager = SessionManager()
     ws_manager = WebSocketManager()

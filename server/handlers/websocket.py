@@ -101,6 +101,7 @@ class WebSocketManager:
                 history=list(session.messages),
                 workspace_path=session.workspace_path,
                 stream_tool_events=False,
+                user_query=content,
             ):
                 if event.type == "token" and event.data:
                     assistant_content = f"{assistant_content}{event.data}"
