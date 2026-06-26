@@ -191,3 +191,18 @@ async def test_app_uses_injected_conversation_store(app):
         response = await client.get("/api/messages")
         assert response.status_code == 200
         assert response.json() == {"messages": []}
+
+
+@pytest.mark.asyncio
+async def test_chat_works_without_tool_index(app):
+    """Chat should work even when tool_index is not configured."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with client.stream(
+            "POST", "/api/chat", json={"content": "hello"}
+        ) as resp:
+            assert resp.status_code == 200
+            full = ""
+            async for chunk in resp.aiter_text():
+                full += chunk
+        assert "data: " in full
