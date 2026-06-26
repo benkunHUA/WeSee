@@ -3,6 +3,10 @@ from __future__ import annotations
 import logging
 import os
 
+# Suppress gRPC "too_many_pings" noise from Milvus Lite
+os.environ["GRPC_VERBOSITY"] = "NONE"
+os.environ["GRPC_TRACE"] = ""
+
 from langchain_core.tools import BaseTool
 from pymilvus import MilvusClient
 
