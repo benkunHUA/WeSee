@@ -1,7 +1,10 @@
 # server/main.py
 import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
+
 from config import ServerConfig
 from tools.index import ToolIndex
 from tools.shell import ShellTool
@@ -32,8 +35,6 @@ def create_app(
     if config is None:
         config = ServerConfig(api_key="sk-test")
 
-    app = FastAPI(title="WeSee Server")
-
     tools = [
         ShellTool(workspace_path="/tmp"),
         FileSystemTool(workspace_path="/tmp"),
@@ -55,19 +56,22 @@ def create_app(
             tool_index=tool_index,
             whitelist=whitelist,
         )
+
+    _engine = None
     if conversation_store is None:
-        engine = make_engine(config.postgres_dsn)
-        conversation_store = ConversationStore(make_session_factory(engine))
+        _engine = make_engine(config.postgres_dsn)
+        conversation_store = ConversationStore(make_session_factory(_engine))
 
-        @app.on_event("shutdown")
-        async def dispose_database_engine():
-            await engine.dispose()
-
-    @app.on_event("startup")
-    async def on_startup():
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
         await conversation_store.ensure_default_user()
         if tool_index is not None:
             await tool_index.build_index(tools)
+        yield
+        if _engine is not None:
+            await _engine.dispose()
+
+    app = FastAPI(title="WeSee Server", lifespan=lifespan)
 
     session_manager = SessionManager()
     ws_manager = WebSocketManager()

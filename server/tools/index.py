@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from langchain_core.tools import BaseTool
 from pymilvus import MilvusClient
@@ -42,6 +43,8 @@ class ToolIndex:
 
     def _connect(self) -> MilvusClient:
         if self._client is None:
+            parent = os.path.dirname(os.path.abspath(self._milvus_path))
+            os.makedirs(parent, exist_ok=True)
             self._client = MilvusClient(uri=self._milvus_path)
         return self._client
 
