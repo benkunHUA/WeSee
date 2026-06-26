@@ -9,7 +9,6 @@ from pymilvus import MilvusClient
 from memory.embeddings import Embedder
 from tools.schema import (
     TOOL_INDEX_COLLECTION,
-    TOOL_INDEX_DIM,
     TOOL_INDEX_FIELD_DESC,
     TOOL_INDEX_FIELD_ID,
     TOOL_INDEX_FIELD_VECTOR,
@@ -64,12 +63,14 @@ class ToolIndex:
             )
             return
 
+        dim = len(vectors[0])
+
         if client.has_collection(TOOL_INDEX_COLLECTION):
             client.drop_collection(TOOL_INDEX_COLLECTION)
 
         client.create_collection(
             collection_name=TOOL_INDEX_COLLECTION,
-            dimension=TOOL_INDEX_DIM,
+            dimension=dim,
             metric_type="COSINE",
             auto_id=False,
             primary_field_name=TOOL_INDEX_FIELD_ID,
