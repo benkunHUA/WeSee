@@ -128,3 +128,20 @@ class TestAgentRunnerToolResolution:
         )
         resolved = await runner._resolve_tools("query")
         assert len(resolved) == 3  # fallback: all tools
+
+    @pytest.mark.asyncio
+    async def test_all_tools_when_not_exceeding_whitelist_size(self, test_config):
+        """When all_tools <= whitelist size, skip RAG entirely."""
+        mock_index = AsyncMock()
+        tools = [MagicMock(), MagicMock()]
+        tools[0].name = "shell"
+        tools[1].name = "file_system"
+        runner = AgentRunner(
+            config=test_config,
+            tools=tools,
+            tool_index=mock_index,
+            whitelist={"shell", "file_system"},
+        )
+        resolved = await runner._resolve_tools("any query")
+        assert len(resolved) == 2
+        mock_index.search.assert_not_called()

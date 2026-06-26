@@ -39,19 +39,22 @@ def create_app(
         FileSystemTool(workspace_path="/tmp"),
         ScreenshotTool(workspace_path="/tmp"),
     ]
-    # Tool RAG index setup
-    tool_index = ToolIndex(
-        embedder=DoubaoEmbedder(MemoryConfig.from_server_config(config)),
-        milvus_path=config.milvus_lite_path,
-    )
 
-    whitelist = {"shell", "file_system"}
-    resolved_agent_runner = agent_runner or AgentRunner(
-        config=config,
-        tools=tools,
-        tool_index=tool_index,
-        whitelist=whitelist,
-    )
+    # Tool RAG index setup — only when agent_runner is not injected (tests skip this)
+    tool_index = None
+    resolved_agent_runner = agent_runner
+    if resolved_agent_runner is None:
+        tool_index = ToolIndex(
+            embedder=DoubaoEmbedder(MemoryConfig.from_server_config(config)),
+            milvus_path=config.milvus_lite_path,
+        )
+        whitelist = {"shell", "file_system"}
+        resolved_agent_runner = AgentRunner(
+            config=config,
+            tools=tools,
+            tool_index=tool_index,
+            whitelist=whitelist,
+        )
     if conversation_store is None:
         engine = make_engine(config.postgres_dsn)
         conversation_store = ConversationStore(make_session_factory(engine))
@@ -63,7 +66,8 @@ def create_app(
     @app.on_event("startup")
     async def on_startup():
         await conversation_store.ensure_default_user()
-        await tool_index.build_index(tools)
+        if tool_index is not None:
+            await tool_index.build_index(tools)
 
     session_manager = SessionManager()
     ws_manager = WebSocketManager()
