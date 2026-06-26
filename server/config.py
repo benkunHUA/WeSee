@@ -17,7 +17,7 @@ class ServerConfig(BaseSettings):
     milvus_lite_path: str = "./data/wesee_memory.db"
     ark_api_key: str = ""
     ark_base_url: str = "https://ark.cn-beijing.volces.com/api/coding/v3"
-    embedding_model: str = "doubao-embedding-vision"
+    embedding_model: str = "doubao-embedding-vision-250615"
     memory_write_async: bool = True
 
     @field_validator("api_key")

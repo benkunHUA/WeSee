@@ -1,5 +1,6 @@
-import httpx
+import asyncio
 from typing import Protocol
+
 from memory.config import MemoryConfig
 
 
@@ -18,20 +19,20 @@ class DoubaoEmbedder:
         self._cfg = cfg
         self._timeout = timeout
         self._dim: int | None = None
-        self._client = httpx.AsyncClient(
-            base_url=cfg.ark_base_url,
-            timeout=timeout,
-            headers={
-                "Authorization": f"Bearer {cfg.ark_api_key}",
-                "Content-Type": "application/json",
-            },
-        )
+        self._client = None
 
     @property
     def dim(self) -> int:
         if self._dim is None:
             raise EmbeddingError("dim not probed yet; call await probe() first")
         return self._dim
+
+    async def _get_client(self):
+        if self._client is None:
+            from volcenginesdkarkruntime import Ark
+
+            self._client = Ark(api_key=self._cfg.ark_api_key)
+        return self._client
 
     async def probe(self) -> int:
         if self._dim is not None:
@@ -43,17 +44,21 @@ class DoubaoEmbedder:
     async def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        payload = {"model": self._cfg.embedding_model, "input": texts}
+        client = await self._get_client()
+        input_items = [{"type": "text", "text": t} for t in texts]
         try:
-            resp = await self._client.post("/embeddings", json=payload)
-        except httpx.HTTPError as e:
-            raise EmbeddingError(f"embedding HTTP error: {e}") from e
-        if resp.status_code != 200:
-            raise EmbeddingError(
-                f"embedding non-200: {resp.status_code} {resp.text[:200]}"
+            resp = await asyncio.to_thread(
+                client.multimodal_embeddings.create,
+                model=self._cfg.embedding_model,
+                input=input_items,
             )
-        data = resp.json().get("data", [])
-        return [item["embedding"] for item in data]
+        except Exception as e:
+            raise EmbeddingError(f"embedding error: {e}") from e
+        dim = len(resp.data.embedding) // len(texts)
+        return [
+            resp.data.embedding[i : i + dim]
+            for i in range(0, len(resp.data.embedding), dim)
+        ]
 
     async def aclose(self) -> None:
-        await self._client.aclose()
+        self._client = None

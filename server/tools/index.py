@@ -58,8 +58,10 @@ class ToolIndex:
         texts = [_build_embedding_text(tool) for tool in tools]
         try:
             vectors = await self._embedder.embed(texts)
-        except Exception:
-            logger.warning("Failed to embed tool descriptions; skipping index build")
+        except Exception as exc:
+            logger.warning(
+                "Failed to embed tool descriptions; skipping index build: %s", exc
+            )
             return
 
         if client.has_collection(TOOL_INDEX_COLLECTION):
