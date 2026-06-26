@@ -30,6 +30,7 @@
 | 重复数据处理 | name 主键 upsert | 每次重启覆盖旧记录，不产生重复 |
 | 基础工具策略 | 白名单始终加载 | shell + file_system 几乎每次对话都用 |
 | 检索策略 | 固定 Top-K | 简单可靠，不加阈值过滤 |
+| 词嵌入内容 | name + description + args_schema | 参数信息提升检索精度 |
 
 ## 数据模型
 
@@ -62,6 +63,26 @@ class ToolIndex:
     async def search(self, query: str, k: int = 2) -> list[BaseTool]:
         """对用户输入做 embedding，返回 Top-K 相似工具（不含已去重的白名单）"""
 ```
+
+### 词嵌入文本构造
+
+`build_index` 拼接每个工具的以下信息后做 embedding：
+
+```
+name: {name}
+description: {description}
+args: {args_schema 各字段名和描述}
+```
+
+示例（`file_system` 工具）：
+
+```
+name: file_system
+description: Read, write, and list files within the workspace directory...
+args: action (One of: read_file, write_file, list_directory), path (Path relative to workspace), content (File content to write)
+```
+
+将 `args_schema` 的字段纳入嵌入文本，能让参数差异帮助区分功能相似的的检索精度更高（如"搜文件名"vs"搜文件内容"），对当前工具数量少时收益有限，但工具增长后价值显著。
 
 ### 修改组件：`AgentRunner`
 
