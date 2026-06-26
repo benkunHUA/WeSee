@@ -1,4 +1,5 @@
 # server/config.py
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, field_validator
@@ -28,6 +29,6 @@ class ServerConfig(BaseSettings):
 
     model_config = {
         "env_prefix": "WESEE_",
-        "env_file": ".env",
+        "env_file": str(Path(__file__).resolve().parent / ".env"),
         "extra": "ignore",
     }
