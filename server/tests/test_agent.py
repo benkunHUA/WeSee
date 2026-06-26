@@ -44,7 +44,9 @@ class TestAgentRunnerRun:
                 events.append(event)
 
             mock_create_agent.assert_called_once()
-            _, system_prompt = mock_create_agent.call_args.args
+            args = mock_create_agent.call_args.args
+            assert len(args) == 3
+            _, system_prompt, resolved_tools = args
             assert "/tmp" in system_prompt
 
             tokens = [e for e in events if e.type == "token"]
@@ -69,3 +71,60 @@ class TestAgentRunnerBuildMessages:
         runner = AgentRunner(config=test_config, tools=[])
         messages = runner._build_messages([])
         assert messages == []
+
+
+from unittest.mock import AsyncMock
+
+
+class TestAgentRunnerToolResolution:
+    @pytest.mark.asyncio
+    async def test_full_tools_when_no_tool_index(self, test_config):
+        """Without tool_index, all tools are returned."""
+        tools = [MagicMock(), MagicMock()]
+        tools[0].name = "shell"
+        tools[1].name = "file_system"
+        runner = AgentRunner(config=test_config, tools=tools)
+        resolved = await runner._resolve_tools("any query")
+        assert len(resolved) == 2
+
+    @pytest.mark.asyncio
+    async def test_whitelist_plus_rag_merge(self, test_config):
+        """Whitelist tools are always included alongside RAG results."""
+        mock_index = AsyncMock()
+        mock_tool = MagicMock()
+        mock_tool.name = "screenshot"
+        mock_index.search.return_value = [mock_tool]
+
+        shell = MagicMock()
+        shell.name = "shell"
+        fs = MagicMock()
+        fs.name = "file_system"
+        all_tools = [shell, fs, mock_tool]
+        runner = AgentRunner(
+            config=test_config,
+            tools=all_tools,
+            tool_index=mock_index,
+            whitelist={"shell", "file_system"},
+        )
+        resolved = await runner._resolve_tools("screenshot query")
+        names = {t.name for t in resolved}
+        assert names == {"shell", "file_system", "screenshot"}
+
+    @pytest.mark.asyncio
+    async def test_fallback_to_all_tools_on_search_failure(self, test_config):
+        """When RAG search fails, fall back to all tools."""
+        mock_index = AsyncMock()
+        mock_index.search.side_effect = RuntimeError("Milvus down")
+
+        tools = [MagicMock(), MagicMock(), MagicMock()]
+        tools[0].name = "shell"
+        tools[1].name = "file_system"
+        tools[2].name = "screenshot"
+        runner = AgentRunner(
+            config=test_config,
+            tools=tools,
+            tool_index=mock_index,
+            whitelist={"shell"},
+        )
+        resolved = await runner._resolve_tools("query")
+        assert len(resolved) == 3  # fallback: all tools

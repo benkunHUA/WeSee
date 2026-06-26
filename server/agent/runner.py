@@ -13,15 +13,26 @@ logger = logging.getLogger("wesee.agent")
 
 
 class AgentRunner:
-    def __init__(self, config: ServerConfig, tools: list[BaseTool]):
+    def __init__(
+        self,
+        config: ServerConfig,
+        tools: list[BaseTool],
+        *,
+        tool_index: Any | None = None,
+        whitelist: set[str] | None = None,
+    ):
         self.config = config
-        self.tools = tools
+        self.all_tools = tools
+        self._tool_index = tool_index
+        self._whitelist = whitelist or set()
 
     async def run(
         self,
         history: list[Message],
         workspace_path: str,
+        *,
         stream_tool_events: bool = True,
+        user_query: str = "",
     ) -> AsyncIterator[ServerEvent]:
         try:
             logger.info(
@@ -30,9 +41,13 @@ class AgentRunner:
                 self.config.base_url,
             )
             llm = create_llm(self.config)
-            agent = self._create_agent(llm, build_system_prompt(workspace_path))
+            resolved_tools = await self._resolve_tools(user_query)
+            agent = self._create_agent(llm, build_system_prompt(workspace_path), resolved_tools)
             messages = self._build_messages(history)
-            logger.info("Starting agent stream, history_len=%d", len(history))
+            logger.info(
+                "Starting agent stream, history_len=%d, tools=%d",
+                len(history), len(resolved_tools),
+            )
 
             async for stream_event in agent.astream_events(
                 {"messages": messages},
@@ -90,8 +105,24 @@ class AgentRunner:
             logger.error("Agent error: %s", e, exc_info=True)
             yield ServerEvent(type="error", data=str(e))
 
-    def _create_agent(self, llm: Any, system_prompt: str) -> Any:
-        return create_agent(llm, self.tools, system_prompt=system_prompt)
+    async def _resolve_tools(self, user_query: str) -> list[BaseTool]:
+        if self._tool_index is None:
+            return list(self.all_tools)
+
+        if len(self.all_tools) <= len(self._whitelist):
+            return list(self.all_tools)
+
+        try:
+            rag_tools = await self._tool_index.search(user_query, k=2)
+        except Exception:
+            logger.warning("Tool RAG search failed; falling back to all tools")
+            return list(self.all_tools)
+
+        selected = set(self._whitelist) | {t.name for t in rag_tools}
+        return [t for t in self.all_tools if t.name in selected]
+
+    def _create_agent(self, llm: Any, system_prompt: str, tools: list[BaseTool]) -> Any:
+        return create_agent(llm, tools, system_prompt=system_prompt)
 
     def _build_messages(
         self, history: list[Message]
