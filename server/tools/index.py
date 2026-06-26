@@ -109,6 +109,10 @@ class ToolIndex:
 
         tool_names: list[str] = []
         for hit in results[0]:
+            name = hit["entity"][TOOL_INDEX_FIELD_ID]
+            score = hit.get("distance", 0)
+            tool_names.append(name)
+            logger.info("RAG hit: tool=%s score=%.4f", name, score)
             tool_names.append(hit["entity"][TOOL_INDEX_FIELD_ID])
 
         return [self._tool_map[name] for name in tool_names if name in self._tool_map]

@@ -107,9 +107,14 @@ class AgentRunner:
 
     async def _resolve_tools(self, user_query: str) -> list[BaseTool]:
         if self._tool_index is None:
+            logger.debug("Tool resolution: tool_index=None, using all %d tools", len(self.all_tools))
             return list(self.all_tools)
 
         if len(self.all_tools) <= len(self._whitelist):
+            logger.debug(
+                "Tool resolution: all_tools(%d) <= whitelist(%d), skipping RAG",
+                len(self.all_tools), len(self._whitelist),
+            )
             return list(self.all_tools)
 
         try:
@@ -118,8 +123,17 @@ class AgentRunner:
             logger.warning("Tool RAG search failed; falling back to all tools")
             return list(self.all_tools)
 
-        selected = set(self._whitelist) | {t.name for t in rag_tools}
-        return [t for t in self.all_tools if t.name in selected]
+        rag_names = {t.name for t in rag_tools}
+        selected = set(self._whitelist) | rag_names
+        resolved = [t for t in self.all_tools if t.name in selected]
+        logger.info(
+            "Tool resolution: query='%s' whitelist=%s rag=%s → tools=%s",
+            user_query[:80],
+            self._whitelist,
+            rag_names,
+            [t.name for t in resolved],
+        )
+        return resolved
 
     def _create_agent(self, llm: Any, system_prompt: str, tools: list[BaseTool]) -> Any:
         return create_agent(llm, tools, system_prompt=system_prompt)
